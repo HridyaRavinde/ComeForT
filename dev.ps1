@@ -41,7 +41,7 @@ switch ($action) {
         function Start-GuiProc {
             $psi = New-Object System.Diagnostics.ProcessStartInfo
             $psi.FileName = "cmd.exe"
-            $psi.Arguments = "/c .\gradlew.bat gui --quiet"
+            $psi.Arguments = "/c .\gradlew.bat gui --quiet --console=plain"
             $psi.UseShellExecute = $false
             $proc = [System.Diagnostics.Process]::Start($psi)
             return $proc
@@ -56,7 +56,7 @@ switch ($action) {
         $watcher.Filter = "*.java"
 
         $guiProc = Start-GuiProc
-        Write-Host "[ComeFort Live] Desktop GUI started (PID: $($guiProc.Id)). Monitoring for changes..." -ForegroundColor Cyan
+        Write-Host "[ComeFort Live] Desktop GUI window is now open (PID: $($guiProc.Id)). Monitoring for changes..." -ForegroundColor Cyan
 
         try {
             while ($true) {
@@ -72,7 +72,7 @@ switch ($action) {
                 Write-Host "`n[ComeFort Live] File changed: $($change.Name)" -ForegroundColor Yellow
                 Write-Host "[ComeFort Live] Recompiling classes..." -ForegroundColor Cyan
 
-                & .\gradlew.bat classes --quiet
+                & .\gradlew.bat classes --quiet --console=plain
                 if ($LASTEXITCODE -eq 0) {
                     Write-Host "[ComeFort Live] Compile OK! Relaunching GUI..." -ForegroundColor Green
                     if ($guiProc -and -not $guiProc.HasExited) {
@@ -80,7 +80,7 @@ switch ($action) {
                     }
                     Start-Sleep -Milliseconds 300
                     $guiProc = Start-GuiProc
-                    Write-Host "[ComeFort Live] GUI updated and restarted (PID: $($guiProc.Id))." -ForegroundColor Green
+                    Write-Host "[ComeFort Live] GUI window updated and active (PID: $($guiProc.Id))." -ForegroundColor Green
                 } else {
                     Write-Host "[ComeFort Live] Compile error! Fix error and save file to reload." -ForegroundColor Red
                 }
@@ -94,7 +94,8 @@ switch ($action) {
     }
     "gui" {
         Write-Host "[ComeFort Dev] Launching Desktop GUI..." -ForegroundColor Green
-        & .\gradlew.bat gui --quiet
+        Write-Host "[ComeFort Dev] GUI Window is now running. (Close the GUI window to return)" -ForegroundColor DarkGray
+        & .\gradlew.bat gui --quiet --console=plain
     }
     "watch" {
         Write-Host "[ComeFort Dev] Continuous Watch Mode (auto-recompile on Ctrl+S)..." -ForegroundColor Green

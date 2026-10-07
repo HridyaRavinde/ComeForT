@@ -109,7 +109,7 @@ public class ShellDetector {
                     "pwsh",
                     "PowerShell 7",
                     pwshPath,
-                    List.of(pwshPath, "-NoLogo", "-NoExit", "-NoProfile"),
+                    List.of(pwshPath, "-NoLogo"),
                     "⚡",
                     "PowerShell 7 (Core)"
             ));
@@ -128,7 +128,7 @@ public class ShellDetector {
                     "powershell",
                     "Windows PowerShell",
                     winPsPath,
-                    List.of(winPsPath, "-NoLogo", "-NoExit", "-NoProfile"),
+                    List.of(winPsPath, "-NoLogo"),
                     "",
                     "Windows PowerShell 5.1"
             ));
@@ -147,7 +147,7 @@ public class ShellDetector {
                     "cmd",
                     "Command Prompt",
                     cmdPath,
-                    List.of(cmdPath, "/Q", "/K"),
+                    List.of(cmdPath),
                     "⌨",
                     "Windows Command Processor"
             ));
@@ -156,10 +156,21 @@ public class ShellDetector {
         // 4. Git Bash (bash.exe)
         String gitBashPath = checkExistingFile(
                 "C:\\Program Files\\Git\\bin\\bash.exe",
+                "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
                 "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
                 System.getenv("LOCALAPPDATA") + "\\Programs\\Git\\bin\\bash.exe",
                 System.getenv("ProgramW6432") + "\\Git\\bin\\bash.exe"
         );
+        if (gitBashPath == null) {
+            String gitExe = findWindowsExecutable("git.exe");
+            if (gitExe != null) {
+                File gitExeFile = new File(gitExe);
+                File candidate1 = new File(gitExeFile.getParentFile().getParentFile(), "bin\\bash.exe");
+                File candidate2 = new File(gitExeFile.getParentFile().getParentFile(), "usr\\bin\\bash.exe");
+                if (candidate1.exists()) gitBashPath = candidate1.getAbsolutePath();
+                else if (candidate2.exists()) gitBashPath = candidate2.getAbsolutePath();
+            }
+        }
         if (gitBashPath != null && addedPaths.add(gitBashPath.toLowerCase())) {
             list.add(new ShellProfile(
                     "git-bash",

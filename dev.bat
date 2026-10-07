@@ -18,7 +18,7 @@ goto end
 
 :run_gui
 echo [ComeFort Dev] Launching Desktop GUI...
-call .\gradlew.bat gui --quiet
+call .\gradlew.bat gui --quiet --console=plain
 goto end
 
 :run_watch
