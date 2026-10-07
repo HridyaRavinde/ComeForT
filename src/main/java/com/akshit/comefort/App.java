@@ -1,0 +1,205 @@
+package com.akshit.comefort;
+
+import com.akshit.comefort.cli.CliFormatter;
+import com.akshit.comefort.cli.commands.*;
+import com.akshit.comefort.db.DatabaseManager;
+import com.akshit.comefort.exception.ComeFortException;
+import com.akshit.comefort.repository.*;
+import com.akshit.comefort.service.*;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+
+/**
+ * ComeFort — Your Local-First Developer Life OS.
+ *
+ * <p>This is the main entry point. It wires together all layers
+ * (database → repositories → services → commands) and delegates
+ * to picocli for command routing.</p>
+ */
+@Command(
+        name = "cf",
+        description = "ComeFort — Your Local-First Developer Life OS",
+        version = "0.1.0",
+        mixinStandardHelpOptions = true,
+        subcommands = {CommandLine.HelpCommand.class}
+)
+public class App implements Runnable {
+
+    @CommandLine.Option(names = {"--gui"}, description = "Launch ComeFort desktop GUI")
+    private boolean gui;
+
+    // --- Infrastructure ---
+    private final DatabaseManager dbManager;
+    private final CliFormatter formatter;
+
+    // --- Repositories ---
+    private final ProjectRepository projectRepository;
+    private final TaskRepository taskRepository;
+    private final NoteRepository noteRepository;
+    private final CaptureRepository captureRepository;
+    private final ActivityRepository activityRepository;
+    private final ConfigRepository configRepository;
+
+    // --- Services ---
+    private final ActivityService activityService;
+    private final ProjectService projectService;
+    private final TaskService taskService;
+    private final NoteService noteService;
+    private final CaptureService captureService;
+    private final SearchService searchService;
+    private final TodayService todayService;
+
+    public App() {
+        this(new DatabaseManager());
+    }
+
+    public App(DatabaseManager dbManager) {
+        // Wire the object graph manually (no DI framework needed for V0.1)
+        this.dbManager = dbManager;
+        this.formatter = new CliFormatter();
+
+        // Repositories
+        this.projectRepository = new ProjectRepository(dbManager);
+        this.taskRepository = new TaskRepository(dbManager);
+        this.noteRepository = new NoteRepository(dbManager);
+        this.captureRepository = new CaptureRepository(dbManager);
+        this.activityRepository = new ActivityRepository(dbManager);
+        this.configRepository = new ConfigRepository(dbManager);
+
+        // Services
+        this.activityService = new ActivityService(activityRepository);
+        this.projectService = new ProjectService(projectRepository, activityService);
+        this.taskService = new TaskService(taskRepository, activityService);
+        this.noteService = new NoteService(noteRepository, activityService);
+        this.captureService = new CaptureService(captureRepository, activityService);
+        this.searchService = new SearchService(taskRepository, projectRepository,
+                noteRepository, captureRepository);
+        this.todayService = new TodayService(taskService, captureService, activityService);
+    }
+
+    @Override
+    public void run() {
+        if (gui) {
+            com.akshit.comefort.gui.MainWindow.launchGui(new String[]{});
+            return;
+        }
+        // No subcommand given — show today dashboard as default
+        ensureInitialized();
+        new TodayCommand(todayService, projectService, formatter).run();
+    }
+
+    /**
+     * Ensures the database is initialized before running any command.
+     * Auto-initializes on first use.
+     */
+    public void ensureInitialized() {
+        if (!dbManager.isDatabaseInitialized()) {
+            dbManager.initialize();
+        } else {
+            // Open connection to existing database
+            dbManager.initialize();
+        }
+    }
+
+    /**
+     * Creates and configures the CommandLine parser with all subcommands and exception handling.
+     */
+    public static CommandLine createCommandLine(App app) {
+        CommandLine cmd = new CommandLine(app);
+
+        // Register subcommands with their dependencies
+        cmd.addSubcommand("init",
+                new InitCommand(app.dbManager, app.formatter));
+        cmd.addSubcommand("c",
+                new CaptureCommand(app.captureService, app.formatter));
+        cmd.addSubcommand("inbox",
+                new InboxCommand(app.captureService, app.formatter));
+        cmd.addSubcommand("gui",
+                new GuiCommand());
+
+        // Task command with subcommands
+        CommandLine taskCmd = new CommandLine(new TaskCommand(app.formatter));
+        taskCmd.addSubcommand("add",
+                new TaskCommand.Add(app.taskService, app.projectService, app.formatter));
+        taskCmd.addSubcommand("list",
+                new TaskCommand.ListTasks(app.taskService, app.projectService, app.formatter));
+        taskCmd.addSubcommand("done",
+                new TaskCommand.Done(app.taskService, app.formatter));
+        taskCmd.addSubcommand("edit",
+                new TaskCommand.Edit(app.taskService, app.projectService, app.formatter));
+        taskCmd.addSubcommand("delete",
+                new TaskCommand.Delete(app.taskService, app.formatter));
+        cmd.addSubcommand("task", taskCmd);
+
+        // Project command with subcommands
+        CommandLine projectCmd = new CommandLine(new ProjectCommand(app.formatter));
+        projectCmd.addSubcommand("add",
+                new ProjectCommand.Add(app.projectService, app.formatter));
+        projectCmd.addSubcommand("list",
+                new ProjectCommand.ListProjects(app.projectService, app.taskService,
+                        app.noteService, app.formatter));
+        projectCmd.addSubcommand("show",
+                new ProjectCommand.Show(app.projectService, app.taskService,
+                        app.noteService, app.activityService, app.formatter));
+        cmd.addSubcommand("project", projectCmd);
+
+        // Note command with subcommands
+        CommandLine noteCmd = new CommandLine(new NoteCommand(app.formatter));
+        noteCmd.addSubcommand("add",
+                new NoteCommand.Add(app.noteService, app.projectService, app.formatter));
+        noteCmd.addSubcommand("list",
+                new NoteCommand.ListNotes(app.noteService, app.projectService, app.formatter));
+        noteCmd.addSubcommand("show",
+                new NoteCommand.Show(app.noteService, app.projectService, app.formatter));
+        noteCmd.addSubcommand("edit",
+                new NoteCommand.Edit(app.noteService, app.projectService, app.formatter));
+        cmd.addSubcommand("note", noteCmd);
+
+        // Search, Today, Status
+        cmd.addSubcommand("search",
+                new SearchCommand(app.searchService, app.formatter));
+        cmd.addSubcommand("today",
+                new TodayCommand(app.todayService, app.projectService, app.formatter));
+        cmd.addSubcommand("status",
+                new StatusCommand(app.projectService, app.taskService,
+                        app.noteService, app.captureService,
+                        app.activityService, app.formatter));
+
+        // Set up execution strategy that initializes DB before every command
+        cmd.setExecutionStrategy(parseResult -> {
+            // Initialize database before any command (except help)
+            app.ensureInitialized();
+
+            // Execute the command
+            return new CommandLine.RunLast().execute(parseResult);
+        });
+
+        // Handle exceptions gracefully
+        cmd.setExecutionExceptionHandler((ex, commandLine, parseResult) -> {
+            if (ex instanceof ComeFortException) {
+                app.formatter.error(ex.getMessage());
+            } else {
+                app.formatter.error("Unexpected error: " + ex.getMessage());
+                if (System.getenv("CF_DEBUG") != null) {
+                    ex.printStackTrace();
+                }
+            }
+            return 1;
+        });
+
+        return cmd;
+    }
+
+    public static void main(String[] args) {
+        App app = new App();
+        CommandLine cmd = createCommandLine(app);
+
+        // Execute
+        int exitCode = cmd.execute(args);
+
+        // Clean up
+        app.dbManager.close();
+
+        System.exit(exitCode);
+    }
+}

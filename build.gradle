@@ -1,0 +1,124 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+group = 'com.akshit.comefort'
+version = '0.1.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(22)
+    }
+}
+
+application {
+    mainClass = 'com.akshit.comefort.App'
+}
+
+// JavaFX modules required for the GUI
+javafx {
+    version = '22.0.2'
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.graphics']
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // SQLite JDBC driver — embedded, serverless, zero-config
+    implementation 'org.xerial:sqlite-jdbc:3.47.2.0'
+
+    // CLI argument parsing — handles subcommands, flags, help text
+    implementation 'info.picocli:picocli:4.7.6'
+
+    // Annotation processor for picocli (compile-time generation)
+    annotationProcessor 'info.picocli:picocli-codegen:4.7.6'
+
+    // Google Fonts via ikonli (for premium typography icons)
+    implementation 'org.kordamp.ikonli:ikonli-javafx:12.3.1'
+    implementation 'org.kordamp.ikonli:ikonli-materialdesign2-pack:12.3.1'
+
+    // Testing
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Ensure picocli knows about the annotation processor
+compileJava {
+    options.compilerArgs += ["-Aproject=${project.group}/${project.name}"]
+}
+
+// Name the distribution scripts 'cf'
+tasks.named('startScripts') {
+    applicationName = 'cf'
+}
+
+// Create an additional 'comefort' alias script
+tasks.register('createComeFortAlias', Copy) {
+    dependsOn 'startScripts'
+    from(tasks.named('startScripts').map { it.outputDir }) {
+        include 'cf'
+        include 'cf.bat'
+    }
+    into layout.buildDirectory.dir('comefort-alias')
+    rename 'cf', 'comefort'
+    rename 'cf.bat', 'comefort.bat'
+}
+
+tasks.named('installDist') {
+    finalizedBy 'createComeFortAlias'
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': application.mainClass.get(),
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.version
+        )
+    }
+}
+
+tasks.register('generateLauncherProps') {
+    dependsOn 'installDist'
+    doLast {
+        def tmpDir = layout.buildDirectory.dir('tmp').get().asFile
+        tmpDir.mkdirs()
+        new File(tmpDir, 'cf.properties').text = "main-jar=comefort-${version}.jar\nmain-class=com.akshit.comefort.App\nwin-console=true\n"
+        def distNativeDir = layout.buildDirectory.dir('dist-native').get().asFile
+        distNativeDir.deleteDir()
+        distNativeDir.mkdirs()
+    }
+}
+
+// Builds native standalone app image with bundled Java runtime (no Java required by user)
+tasks.register('packageNative', Exec) {
+    dependsOn 'generateLauncherProps'
+    commandLine 'jpackage',
+        '--type', 'app-image',
+        '--name', 'ComeFort',
+        '--app-version', project.version.toString(),
+        '--input', "${layout.buildDirectory.get().asFile}/install/comefort/lib",
+        '--main-jar', "comefort-${version}.jar",
+        '--main-class', 'com.akshit.comefort.gui.MainWindow',
+        '--add-launcher', "cf=${layout.buildDirectory.get().asFile}/tmp/cf.properties",
+        '--dest', "${layout.buildDirectory.get().asFile}/dist-native"
+}
+
+// Zips the native bundle into a distributable archive
+tasks.register('packageNativeZip', Zip) {
+    dependsOn 'packageNative'
+    archiveFileName = "ComeFort-v${project.version}-windows-x64.zip"
+    destinationDirectory = layout.buildDirectory.dir('distributions')
+    from(layout.buildDirectory.dir('dist-native/ComeFort')) {
+        into 'ComeFort'
+    }
+}
+

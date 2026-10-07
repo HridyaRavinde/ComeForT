@@ -1,0 +1,338 @@
+/* ComeFort — Base styles (shared between dark and light themes)
+ * Notion-inspired, developer-focused, clean and minimal */
+
+/* === Root variables (overridden by theme files) === */
+.root {
+    /* Fonts */
+    -fx-font-family: "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
+    -fx-font-size: 14px;
+
+    /* Spacing */
+    -cf-spacing-xs: 4px;
+    -cf-spacing-sm: 8px;
+    -cf-spacing-md: 16px;
+    -cf-spacing-lg: 24px;
+    -cf-spacing-xl: 32px;
+
+    /* Border radius */
+    -cf-radius-sm: 4px;
+    -cf-radius-md: 6px;
+    -cf-radius-lg: 8px;
+
+    /* Transitions */
+    -cf-transition-fast: 150ms;
+    -cf-transition-normal: 250ms;
+}
+
+/* === Sidebar === */
+.sidebar {
+    -fx-min-width: 240px;
+    -fx-max-width: 240px;
+    -fx-padding: 12 0 12 0;
+}
+
+.sidebar .brand {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-padding: 16 20 24 20;
+}
+
+.sidebar .nav-item {
+    -fx-padding: 8 20 8 20;
+    -fx-cursor: hand;
+    -fx-background-radius: 6;
+    -fx-font-size: 13.5px;
+    -fx-alignment: center-left;
+    -fx-graphic-text-gap: 10;
+    -fx-max-width: infinity;
+}
+
+.sidebar .nav-item:hover {
+    -fx-opacity: 0.85;
+}
+
+.sidebar .nav-item.active {
+    -fx-font-weight: bold;
+}
+
+.sidebar .section-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 16 20 4 20;
+    -fx-text-transform: uppercase;
+}
+
+.sidebar .nav-separator {
+    -fx-padding: 8 20 8 20;
+}
+
+/* === Content area === */
+.content-area {
+    -fx-padding: 32 40 32 40;
+}
+
+.content-area .page-title {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 8 0;
+}
+
+.content-area .page-subtitle {
+    -fx-font-size: 14px;
+    -fx-padding: 0 0 24 0;
+    -fx-opacity: 0.6;
+}
+
+/* === Cards === */
+.card {
+    -fx-padding: 16;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 4, 0, 0, 1);
+}
+
+.card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.14), 8, 0, 0, 2);
+}
+
+/* === Buttons === */
+.btn-primary {
+    -fx-padding: 8 20 8 20;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+}
+
+.btn-secondary {
+    -fx-padding: 8 20 8 20;
+    -fx-font-size: 13px;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+}
+
+.btn-ghost {
+    -fx-padding: 6 12 6 12;
+    -fx-font-size: 13px;
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.btn-danger {
+    -fx-padding: 8 20 8 20;
+    -fx-font-size: 13px;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+}
+
+/* === Text fields and inputs === */
+.text-input {
+    -fx-padding: 8 12 8 12;
+    -fx-font-size: 13.5px;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.text-area {
+    -fx-font-size: 13.5px;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+/* === Combo boxes === */
+.combo-box {
+    -fx-padding: 4 8 4 8;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+/* === Check boxes === */
+.check-box {
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+}
+
+/* === Tables === */
+.table-view {
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+
+.table-view .column-header {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 12 8 12;
+}
+
+.table-view .table-cell {
+    -fx-padding: 8 12 8 12;
+    -fx-font-size: 13px;
+}
+
+/* === Labels and text === */
+.label-muted {
+    -fx-opacity: 0.5;
+    -fx-font-size: 12px;
+}
+
+.label-small {
+    -fx-font-size: 12px;
+}
+
+.label-section {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 8 0;
+}
+
+/* === Tags / Badges === */
+.badge {
+    -fx-padding: 2 8 2 8;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+}
+
+.badge-critical {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+}
+
+.badge-high {
+    -fx-background-color: #e67e22;
+    -fx-text-fill: white;
+}
+
+.badge-medium {
+    -fx-background-color: #f39c12;
+    -fx-text-fill: #1a1a1a;
+}
+
+.badge-low {
+    -fx-background-color: #95a5a6;
+    -fx-text-fill: white;
+}
+
+.badge-done {
+    -fx-background-color: #2ecc71;
+    -fx-text-fill: white;
+}
+
+.badge-open {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+}
+
+/* === Form layouts === */
+.form-group {
+    -fx-spacing: 6;
+    -fx-padding: 0 0 12 0;
+}
+
+.form-label {
+    -fx-font-size: 12.5px;
+    -fx-font-weight: bold;
+}
+
+.form-hint {
+    -fx-font-size: 11.5px;
+    -fx-opacity: 0.5;
+}
+
+/* === Command preview box === */
+.command-preview {
+    -fx-padding: 12;
+    -fx-font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    -fx-font-size: 12.5px;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+/* === Status bar === */
+.status-bar {
+    -fx-padding: 6 16 6 16;
+    -fx-font-size: 12px;
+}
+
+/* === Quick capture bar === */
+.quick-capture {
+    -fx-padding: 12 16 12 16;
+    -fx-font-size: 14px;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+
+/* === Empty state === */
+.empty-state {
+    -fx-alignment: center;
+    -fx-padding: 60 0 60 0;
+}
+
+.empty-state .empty-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-opacity: 0.6;
+}
+
+.empty-state .empty-subtitle {
+    -fx-font-size: 13px;
+    -fx-opacity: 0.4;
+    -fx-padding: 8 0 16 0;
+}
+
+/* === Scrollbar minimal === */
+.scroll-bar:vertical {
+    -fx-pref-width: 8px;
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical .thumb {
+    -fx-background-radius: 4;
+    -fx-background-insets: 2;
+}
+
+.scroll-bar:horizontal {
+    -fx-pref-height: 8px;
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:horizontal .thumb {
+    -fx-background-radius: 4;
+    -fx-background-insets: 2;
+}
+
+/* === Task list item === */
+.task-item {
+    -fx-padding: 10 16 10 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.task-item:hover {
+    -fx-opacity: 0.9;
+}
+
+.task-item .task-title {
+    -fx-font-size: 13.5px;
+}
+
+.task-item .task-meta {
+    -fx-font-size: 12px;
+    -fx-opacity: 0.5;
+}
+
+/* === Capture item === */
+.capture-item {
+    -fx-padding: 10 16 10 16;
+    -fx-background-radius: 6;
+}
+
+/* === Activity item === */
+.activity-item {
+    -fx-padding: 6 0 6 0;
+    -fx-font-size: 12.5px;
+}

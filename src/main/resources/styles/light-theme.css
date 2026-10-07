@@ -1,0 +1,264 @@
+/* ComeFort — Light Theme
+ * Clean Notion-like light mode */
+
+.root {
+    -fx-base: #ffffff;
+    -fx-background: #ffffff;
+    -fx-control-inner-background: #ffffff;
+    -fx-text-fill: #37352f;
+    -fx-accent: #2383e2;
+
+    -cf-bg-primary: #ffffff;
+    -cf-bg-secondary: #fbfbfa;
+    -cf-bg-tertiary: #f1f1ef;
+    -cf-bg-hover: #ebebea;
+    -cf-bg-active: #e3e3e0;
+    -cf-bg-card: #ffffff;
+    -cf-bg-input: #ffffff;
+
+    -cf-border: #e3e3e0;
+    -cf-border-light: #ebebea;
+
+    -cf-text-primary: #37352f;
+    -cf-text-secondary: #787774;
+    -cf-text-muted: #b4b4b0;
+
+    -cf-accent: #2383e2;
+    -cf-accent-hover: #1a6dbe;
+    -cf-accent-text: #ffffff;
+
+    -cf-success: #0f7b0f;
+    -cf-warning: #cf8e12;
+    -cf-danger: #e03e3e;
+    -cf-info: #2383e2;
+}
+
+/* Sidebar */
+.sidebar {
+    -fx-background-color: #fbfbfa;
+    -fx-border-color: transparent #e3e3e0 transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.sidebar .brand {
+    -fx-text-fill: #37352f;
+}
+
+.sidebar .nav-item {
+    -fx-text-fill: #787774;
+    -fx-background-color: transparent;
+}
+
+.sidebar .nav-item:hover {
+    -fx-background-color: #ebebea;
+    -fx-text-fill: #37352f;
+}
+
+.sidebar .nav-item.active {
+    -fx-background-color: #e3e3e0;
+    -fx-text-fill: #37352f;
+}
+
+.sidebar .section-label {
+    -fx-text-fill: #b4b4b0;
+}
+
+/* Content area */
+.content-area {
+    -fx-background-color: #ffffff;
+}
+
+.content-area .page-title {
+    -fx-text-fill: #37352f;
+}
+
+/* Cards */
+.card {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e3e3e0;
+    -fx-border-width: 1;
+}
+
+/* Buttons */
+.btn-primary {
+    -fx-background-color: #2383e2;
+    -fx-text-fill: #ffffff;
+}
+
+.btn-primary:hover {
+    -fx-background-color: #1a6dbe;
+}
+
+.btn-secondary {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #37352f;
+    -fx-border-color: #e3e3e0;
+    -fx-border-width: 1;
+}
+
+.btn-secondary:hover {
+    -fx-background-color: #f1f1ef;
+}
+
+.btn-ghost:hover {
+    -fx-background-color: #ebebea;
+    -fx-text-fill: #37352f;
+}
+
+.btn-danger {
+    -fx-background-color: #e03e3e;
+    -fx-text-fill: #ffffff;
+}
+
+.btn-danger:hover {
+    -fx-background-color: #c53030;
+}
+
+/* Inputs */
+.text-input {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #37352f;
+    -fx-border-color: #e3e3e0;
+    -fx-border-width: 1;
+    -fx-prompt-text-fill: #b4b4b0;
+}
+
+.text-input:focused {
+    -fx-border-color: #2383e2;
+    -fx-background-color: #ffffff;
+}
+
+.text-area {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #37352f;
+    -fx-border-color: #e3e3e0;
+    -fx-border-width: 1;
+}
+
+.text-area:focused {
+    -fx-border-color: #2383e2;
+}
+
+/* Combo box */
+.combo-box {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e3e3e0;
+    -fx-border-width: 1;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: #37352f;
+    -fx-background-color: #ffffff;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #ffffff;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #f1f1ef;
+}
+
+/* Check box */
+.check-box {
+    -fx-text-fill: #37352f;
+}
+
+/* Tables */
+.table-view {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e3e3e0;
+}
+
+.table-view .column-header {
+    -fx-background-color: #fbfbfa;
+    -fx-text-fill: #787774;
+    -fx-border-color: transparent transparent #e3e3e0 transparent;
+}
+
+.table-view .table-row-cell {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #f1f1ef transparent;
+}
+
+.table-view .table-row-cell:hover {
+    -fx-background-color: #fbfbfa;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: #e8f0fe;
+}
+
+.table-view .table-cell {
+    -fx-text-fill: #37352f;
+}
+
+/* Command preview */
+.command-preview {
+    -fx-background-color: #f7f6f3;
+    -fx-text-fill: #0f7b0f;
+    -fx-border-color: #e3e3e0;
+    -fx-border-width: 1;
+}
+
+/* Status bar */
+.status-bar {
+    -fx-background-color: #fbfbfa;
+    -fx-text-fill: #787774;
+    -fx-border-color: #e3e3e0 transparent transparent transparent;
+}
+
+/* Quick capture */
+.quick-capture {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #37352f;
+    -fx-border-color: #e3e3e0;
+    -fx-border-width: 1;
+    -fx-prompt-text-fill: #b4b4b0;
+}
+
+.quick-capture:focused {
+    -fx-border-color: #2383e2;
+}
+
+/* Scrollbar */
+.scroll-bar:vertical .thumb {
+    -fx-background-color: #c0c0c0;
+}
+
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: #c0c0c0;
+}
+
+/* Task items */
+.task-item {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #f1f1ef;
+    -fx-border-width: 0 0 1 0;
+}
+
+.task-item:hover {
+    -fx-background-color: #fbfbfa;
+}
+
+/* Form labels */
+.form-label {
+    -fx-text-fill: #37352f;
+}
+
+.form-hint {
+    -fx-text-fill: #b4b4b0;
+}
+
+/* Separator */
+.separator .line {
+    -fx-border-color: #e3e3e0;
+}
+
+/* Tooltip */
+.tooltip {
+    -fx-background-color: #37352f;
+    -fx-text-fill: #ffffff;
+    -fx-background-radius: 6;
+    -fx-font-size: 12px;
+}

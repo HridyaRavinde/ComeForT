@@ -1,0 +1,50 @@
+======================================================================
+                  ComeFort - Quick Start Guide
+======================================================================
+
+Prerequisites:
+  - Java 21 or higher installed on your computer.
+    Download from https://adoptium.net if needed.
+
+----------------------------------------------------------------------
+Option 1: Just Run (No Installation Required)
+----------------------------------------------------------------------
+- To open the Desktop GUI:
+    Double-click 'ComeFort-GUI.bat'
+
+- To use the Terminal CLI:
+    Double-click 'ComeFort-CLI.bat'
+    (Opens a terminal pre-configured with the 'cf' command)
+
+----------------------------------------------------------------------
+Option 2: Install System-Wide (Recommended)
+----------------------------------------------------------------------
+1. Double-click 'install.bat'.
+2. It will:
+   - Add ComeFort to your User PATH.
+   - Create a 'ComeFort' shortcut on your Desktop.
+3. You can now:
+   - Double-click the Desktop shortcut anytime to open the GUI.
+   - Open ANY Command Prompt or PowerShell and type:
+       cf --help
+       cf c "your quick thought"
+       cf today
+       cf gui
+
+----------------------------------------------------------------------
+Commands Cheat Sheet:
+----------------------------------------------------------------------
+  cf c "thought"              Quick capture to inbox
+  cf inbox                    Review inbox items
+  cf project add <name>       Create a project
+  cf project list             List projects
+  cf task add "<title>"       Add a task (-p project, -d today, --priority high)
+  cf task list                List tasks (filter by project, status, priority)
+  cf task done "<title|id>"   Mark task as done
+  cf note add "<title>"       Create note (-c content, -p project)
+  cf search "<query>"         Search across tasks, projects, notes & inbox
+  cf today                    Daily dashboard overview
+  cf status                   System status & recent activity log
+  cf gui                      Launch the desktop GUI
+
+======================================================================
