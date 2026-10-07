@@ -63,9 +63,53 @@ public class TerminalPanel {
     private double currentHeight = 280.0;
 
     /**
+     * Professional dark color palette inspired by VS Code Dark+ & GitHub Dark.
+     */
+    public static class ComeFortDarkColorPalette extends ColorPalette {
+
+        private static final Color[] COLORS = new Color[]{
+                new Color(18, 19, 23),      // 0: Black / Dark Base (#121317)
+                new Color(255, 123, 114),   // 1: Red (#ff7b72)
+                new Color(63, 185, 80),     // 2: Green (#3fb950)
+                new Color(210, 153, 34),    // 3: Yellow (#d29922)
+                new Color(88, 166, 255),    // 4: Blue (#58a6ff)
+                new Color(188, 140, 255),   // 5: Magenta (#bc8cff)
+                new Color(57, 197, 207),    // 6: Cyan (#39c5cf)
+                new Color(209, 215, 222),   // 7: White / Text (#d1d7de)
+                new Color(110, 118, 129),   // 8: Bright Black / Muted Gray (#6e7681)
+                new Color(255, 161, 152),   // 9: Bright Red (#ffa198)
+                new Color(86, 211, 100),    // 10: Bright Green (#56d364)
+                new Color(227, 179, 65),    // 11: Bright Yellow (#e3b341)
+                new Color(121, 192, 255),   // 12: Bright Blue (#79c0ff)
+                new Color(210, 168, 255),   // 13: Bright Magenta (#d2a8ff)
+                new Color(86, 212, 221),    // 14: Bright Cyan (#56d4dd)
+                new Color(240, 246, 252)    // 15: Bright White (#f0f6fc)
+        };
+
+        @Override
+        public Color getForegroundByColorIndex(int index) {
+            if (index >= 0 && index < COLORS.length) {
+                return COLORS[index];
+            }
+            return COLORS[7];
+        }
+
+        @Override
+        public Color getBackgroundByColorIndex(int index) {
+            if (index >= 0 && index < COLORS.length) {
+                return COLORS[index];
+            }
+            return COLORS[0];
+        }
+    }
+
+    /**
      * Custom settings provider for a sleek, modern developer terminal aesthetic.
      */
     public static class ComeFortTerminalSettings extends DefaultSettingsProvider {
+
+        private static final TerminalColor DARK_BG = TerminalColor.rgb(18, 19, 23); // #121317
+        private static final TerminalColor LIGHT_FG = TerminalColor.rgb(230, 237, 243); // #e6edf3
 
         @Override
         public Font getTerminalFont() {
@@ -79,7 +123,22 @@ public class TerminalPanel {
 
         @Override
         public ColorPalette getTerminalColorPalette() {
-            return ColorPaletteImpl.XTERM_PALETTE;
+            return new ComeFortDarkColorPalette();
+        }
+
+        @Override
+        public TerminalColor getDefaultForeground() {
+            return LIGHT_FG;
+        }
+
+        @Override
+        public TerminalColor getDefaultBackground() {
+            return DARK_BG;
+        }
+
+        @Override
+        public TextStyle getDefaultStyle() {
+            return new TextStyle(LIGHT_FG, DARK_BG);
         }
 
         @Override
@@ -196,7 +255,7 @@ public class TerminalPanel {
 
         // Embed terminal pane into VBox
         Pane terminalPane = terminalWidget.getPane();
-        terminalPane.setStyle("-fx-background-color: #0f1117;");
+        terminalPane.setStyle("-fx-background-color: #121317;");
         VBox.setVgrow(terminalPane, Priority.ALWAYS);
 
         rootNode.getChildren().addAll(header, terminalPane);

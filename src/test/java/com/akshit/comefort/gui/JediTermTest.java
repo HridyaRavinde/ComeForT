@@ -68,13 +68,18 @@ class JediTermTest {
                     }
                 };
 
-                DefaultSettingsProvider settings = new DefaultSettingsProvider();
+                com.akshit.comefort.gui.components.TerminalPanel.ComeFortTerminalSettings settings =
+                        new com.akshit.comefort.gui.components.TerminalPanel.ComeFortTerminalSettings();
                 JediTermFxWidget widget = new JediTermFxWidget(settings);
                 widget.setTtyConnector(connector);
                 widget.start();
 
                 assertNotNull(widget.getPane(), "Terminal widget Pane must not be null");
                 assertTrue(widget.isSessionRunning(), "Terminal session must be running");
+
+                javafx.scene.paint.Color bg = widget.getTerminalPanel().getBackground();
+                System.out.println("TerminalPanel Background Color: " + bg);
+                assertEquals(javafx.scene.paint.Color.web("#121317"), bg, "Background color must be #121317");
 
                 widget.stop();
                 widget.close();

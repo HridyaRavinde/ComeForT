@@ -340,40 +340,43 @@
 /* === Integrated Terminal === */
 .terminal-panel {
     -fx-border-width: 1 0 0 0;
-    -fx-border-color: #2a2a2a;
-    -fx-background-color: #141414;
+    -fx-border-color: #242632;
+    -fx-background-color: #121317;
 }
 
 .terminal-header {
     -fx-border-width: 0 0 1 0;
-    -fx-border-color: #252525;
-    -fx-background-color: #1a1a1a;
+    -fx-border-color: #20222e;
+    -fx-background-color: #161822;
 }
 
 .terminal-title {
     -fx-font-size: 11.5px;
     -fx-font-weight: bold;
-    -fx-text-fill: #888888;
+    -fx-text-fill: #8b949e;
 }
 
-.terminal-scroll {
-    -fx-background-color: #121212;
-    -fx-background: #121212;
+/* JediTerm scrollbar styling */
+.terminal-panel .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 8px;
 }
-
-.terminal-scroll > .viewport {
-    -fx-background-color: #121212;
+.terminal-panel .scroll-bar:vertical .track {
+    -fx-background-color: #121317;
+    -fx-border-color: transparent;
 }
-
-.terminal-flow {
-    -fx-background-color: #121212;
+.terminal-panel .scroll-bar:vertical .thumb {
+    -fx-background-color: #2b3044;
+    -fx-background-radius: 4px;
 }
-
-.terminal-cursor {
-    -fx-font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
-    -fx-font-size: 13px;
-    -fx-font-weight: bold;
-    -fx-fill: #2ecc71;
+.terminal-panel .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #3e4663;
+}
+.terminal-panel .scroll-bar .increment-button,
+.terminal-panel .scroll-bar .decrement-button {
+    -fx-pref-height: 0;
+    -fx-pref-width: 0;
+    -fx-opacity: 0;
 }
 
 .terminal-input-text {
@@ -413,5 +416,75 @@
 
 .terminal-shell-select {
     -fx-font-size: 11px;
-    -fx-pref-height: 22px;
+    -fx-pref-height: 24px;
+    -fx-background-color: #1e202c;
+    -fx-border-color: #2b3042;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.terminal-shell-select .list-cell {
+    -fx-text-fill: #c9d1d9;
+    -fx-background-color: #1e202c;
+    -fx-font-size: 11px;
+    -fx-padding: 2 6 2 6;
+}
+
+.terminal-shell-select .combo-box-popup .list-view {
+    -fx-background-color: #161822;
+    -fx-border-color: #2b3042;
+    -fx-border-width: 1;
+}
+
+.terminal-shell-select .combo-box-popup .list-cell {
+    -fx-text-fill: #e6edf3;
+    -fx-background-color: #161822;
+    -fx-padding: 4 8 4 8;
+}
+
+.terminal-shell-select .combo-box-popup .list-cell:hover,
+.terminal-shell-select .combo-box-popup .list-cell:filled:selected {
+    -fx-background-color: #2b3044;
+    -fx-text-fill: #ffffff;
+}
+
+.terminal-panel .menu-button {
+    -fx-background-color: #1e202c;
+    -fx-text-fill: #c9d1d9;
+    -fx-border-color: #2b3042;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-font-size: 11px;
+    -fx-padding: 2 6 2 6;
+    -fx-cursor: hand;
+}
+
+.terminal-panel .menu-button:hover {
+    -fx-background-color: #2b3044;
+    -fx-text-fill: #ffffff;
+}
+
+.terminal-panel .menu-button .arrow {
+    -fx-background-color: #8b949e;
+}
+
+.terminal-panel .context-menu {
+    -fx-background-color: #161822;
+    -fx-border-color: #2b3042;
+    -fx-border-width: 1;
+}
+
+.terminal-panel .menu-item {
+    -fx-background-color: #161822;
+    -fx-padding: 4 10 4 10;
+}
+
+.terminal-panel .menu-item .label {
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 11px;
+}
+
+.terminal-panel .menu-item:hover,
+.terminal-panel .menu-item:focused {
+    -fx-background-color: #2b3044;
 }

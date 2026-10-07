@@ -26,6 +26,30 @@ if (-not $CommandArgs -or $CommandArgs.Length -eq 0 -or $CommandArgs[0] -eq "hel
 
 $action = $CommandArgs[0].ToLower()
 
+function Get-JavaCommand {
+    if ($env:JAVA_HOME) {
+        $candidate = Join-Path $env:JAVA_HOME "bin\java.exe"
+        if (Test-Path $candidate) {
+            return $candidate
+        }
+    }
+    $cmd = Get-Command java.exe -ErrorAction SilentlyContinue
+    if ($cmd) {
+        return $cmd.Source
+    }
+    return "java.exe"
+}
+
+function Start-GuiProc {
+    param([string]$javaCmd)
+    $argFile = Join-Path (Get-Location) "build\dev-args.txt"
+    if (-not (Test-Path $argFile)) {
+        & .\gradlew.bat classes --quiet --console=plain
+    }
+    $proc = Start-Process -FilePath $javaCmd -ArgumentList "@$argFile" -WorkingDirectory (Get-Location).Path -PassThru
+    return $proc
+}
+
 switch ($action) {
     "live" {
         Write-Host ""
@@ -38,13 +62,11 @@ switch ($action) {
         Write-Host " -> Press Ctrl+C in this terminal to stop." -ForegroundColor DarkGray
         Write-Host ""
 
-        function Start-GuiProc {
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = "cmd.exe"
-            $psi.Arguments = "/c .\gradlew.bat gui --quiet --console=plain"
-            $psi.UseShellExecute = $false
-            $proc = [System.Diagnostics.Process]::Start($psi)
-            return $proc
+        $javaCmd = Get-JavaCommand
+        $argFile = Join-Path (Get-Location) "build\dev-args.txt"
+        if (-not (Test-Path $argFile)) {
+            Write-Host "[ComeFort Live] Building initial workspace..." -ForegroundColor Cyan
+            & .\gradlew.bat classes --quiet --console=plain
         }
 
         # Watch src/main/java for code changes
@@ -55,19 +77,24 @@ switch ($action) {
         $watcher.EnableRaisingEvents = $true
         $watcher.Filter = "*.java"
 
-        $guiProc = Start-GuiProc
+        $guiProc = Start-GuiProc -javaCmd $javaCmd
         Write-Host "[ComeFort Live] Desktop GUI window is now open (PID: $($guiProc.Id)). Monitoring for changes..." -ForegroundColor Cyan
 
         try {
             while ($true) {
+                if ($guiProc -and $guiProc.HasExited) {
+                    Write-Host "[ComeFort Live] GUI window closed by user. Exiting live mode." -ForegroundColor DarkGray
+                    break
+                }
+
                 # Check for file changes
-                $change = $watcher.WaitForChanged([System.IO.WatcherChangeTypes]::Changed -bor [System.IO.WatcherChangeTypes]::Created, 1500)
+                $change = $watcher.WaitForChanged([System.IO.WatcherChangeTypes]::Changed -bor [System.IO.WatcherChangeTypes]::Created, 1000)
                 if ($change.TimedOut) {
                     continue
                 }
 
                 # Debounce editor write burst
-                Start-Sleep -Milliseconds 400
+                Start-Sleep -Milliseconds 350
 
                 Write-Host "`n[ComeFort Live] File changed: $($change.Name)" -ForegroundColor Yellow
                 Write-Host "[ComeFort Live] Recompiling classes..." -ForegroundColor Cyan
@@ -76,10 +103,10 @@ switch ($action) {
                 if ($LASTEXITCODE -eq 0) {
                     Write-Host "[ComeFort Live] Compile OK! Relaunching GUI..." -ForegroundColor Green
                     if ($guiProc -and -not $guiProc.HasExited) {
-                        taskkill.exe /T /F /PID $guiProc.Id | Out-Null
+                        Stop-Process -Id $guiProc.Id -Force -ErrorAction SilentlyContinue
                     }
-                    Start-Sleep -Milliseconds 300
-                    $guiProc = Start-GuiProc
+                    Start-Sleep -Milliseconds 200
+                    $guiProc = Start-GuiProc -javaCmd $javaCmd
                     Write-Host "[ComeFort Live] GUI window updated and active (PID: $($guiProc.Id))." -ForegroundColor Green
                 } else {
                     Write-Host "[ComeFort Live] Compile error! Fix error and save file to reload." -ForegroundColor Red
@@ -88,14 +115,19 @@ switch ($action) {
         } finally {
             $watcher.Dispose()
             if ($guiProc -and -not $guiProc.HasExited) {
-                taskkill.exe /T /F /PID $guiProc.Id | Out-Null
+                Stop-Process -Id $guiProc.Id -Force -ErrorAction SilentlyContinue
             }
         }
     }
     "gui" {
         Write-Host "[ComeFort Dev] Launching Desktop GUI..." -ForegroundColor Green
         Write-Host "[ComeFort Dev] GUI Window is now running. (Close the GUI window to return)" -ForegroundColor DarkGray
-        & .\gradlew.bat gui --quiet --console=plain
+        $javaCmd = Get-JavaCommand
+        $argFile = Join-Path (Get-Location) "build\dev-args.txt"
+        if (-not (Test-Path $argFile)) {
+            & .\gradlew.bat classes --quiet --console=plain
+        }
+        & $javaCmd "@$argFile"
     }
     "watch" {
         Write-Host "[ComeFort Dev] Continuous Watch Mode (auto-recompile on Ctrl+S)..." -ForegroundColor Green

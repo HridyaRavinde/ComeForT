@@ -65,6 +65,20 @@ tasks.register('gui', JavaExec) {
     args = ['--gui']
 }
 
+// Generate direct java invocation arguments for instant dev hot reload (0s restart, no Gradle daemon lock)
+tasks.register('writeDevArgs') {
+    dependsOn 'classes'
+    doLast {
+        def buildDir = layout.buildDirectory.get().asFile
+        buildDir.mkdirs()
+        def cp = sourceSets.main.runtimeClasspath.asPath
+        def argFile = new File(buildDir, 'dev-args.txt')
+        argFile.text = "-Dfile.encoding=UTF-8\n-cp\n\"${cp.replace('\\', '/')}\"\ncom.akshit.comefort.App\n--gui\n"
+    }
+}
+
+classes.finalizedBy 'writeDevArgs'
+
 // Ensure picocli knows about the annotation processor
 compileJava {
     options.compilerArgs += ["-Aproject=${project.group}/${project.name}"]

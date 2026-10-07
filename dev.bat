@@ -17,8 +17,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dev.ps1 live
 goto end
 
 :run_gui
-echo [ComeFort Dev] Launching Desktop GUI...
-call .\gradlew.bat gui --quiet --console=plain
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dev.ps1 gui
 goto end
 
 :run_watch
