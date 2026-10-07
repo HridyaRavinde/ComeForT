@@ -11,10 +11,11 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Today dashboard screen — GUI equivalent of `cf today`.
+ * Today dashboard screen — GUI equivalent of `cmf today` (or `comefort today`).
  * Shows: quick capture bar + overdue + due today + high priority + inbox count + activity.
  */
 public class TodayScreen {
@@ -47,10 +48,10 @@ public class TodayScreen {
         title.getStyleClass().add("page-title");
         root.getChildren().add(title);
 
-        // Quick capture bar — GUI equivalent of `cf c <text>`
+        // Quick capture bar — GUI equivalent of `cmf c <text>`
         TextField captureField = new TextField();
         captureField.getStyleClass().add("quick-capture");
-        captureField.setPromptText("⚡ Quick capture — type anything and press Enter  (CLI: cf c \"your thought\")");
+        captureField.setPromptText("⚡ Quick capture — type anything and press Enter  (CLI: cmf c \"your thought\")");
         captureField.setOnAction(e -> {
             String text = captureField.getText().trim();
             if (!text.isEmpty()) {
@@ -63,23 +64,24 @@ public class TodayScreen {
 
         // Build the today view data
         TodayService.TodayView view = todayService.buildTodayView();
+        Map<String, String> projectNames = projectService.getProjectNameMap();
 
         // Overdue tasks
         if (!view.overdueTasks().isEmpty()) {
             root.getChildren().add(buildTaskSection("⚠ OVERDUE", view.overdueTasks(),
-                    "badge-critical"));
+                    "badge-critical", projectNames));
         }
 
         // Due today
         if (!view.dueTodayTasks().isEmpty()) {
             root.getChildren().add(buildTaskSection("📅 DUE TODAY", view.dueTodayTasks(),
-                    "badge-high"));
+                    "badge-high", projectNames));
         }
 
         // High priority
         if (!view.highPriorityTasks().isEmpty()) {
             root.getChildren().add(buildTaskSection("🔥 HIGH PRIORITY",
-                    view.highPriorityTasks(), "badge-medium"));
+                    view.highPriorityTasks(), "badge-medium", projectNames));
         }
 
         // Inbox count
@@ -142,7 +144,7 @@ public class TodayScreen {
     /**
      * Builds a section showing a list of tasks.
      */
-    private VBox buildTaskSection(String header, List<Task> tasks, String badgeClass) {
+    private VBox buildTaskSection(String header, List<Task> tasks, String badgeClass, Map<String, String> projectNames) {
         VBox section = new VBox(4);
         section.setPadding(new Insets(8, 0, 0, 0));
 
@@ -174,12 +176,12 @@ public class TodayScreen {
             titleLabel.getStyleClass().add("task-title");
             HBox.setHgrow(titleLabel, Priority.ALWAYS);
 
-            // Project name
+            // Project name (loaded from map — 0 extra queries)
             Label projectLabel = new Label();
             if (task.getProjectId() != null) {
-                try {
-                    projectLabel.setText(projectService.getById(task.getProjectId()).getName());
-                } catch (Exception ignored) {
+                String pName = projectNames.get(task.getProjectId());
+                if (pName != null) {
+                    projectLabel.setText(pName);
                 }
             }
             projectLabel.getStyleClass().add("task-meta");

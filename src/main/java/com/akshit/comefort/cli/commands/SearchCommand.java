@@ -37,7 +37,7 @@ public class SearchCommand implements Runnable {
     @Override
     public void run() {
         if (queryWords == null || queryWords.isEmpty()) {
-            formatter.error("Specify a search query. Usage: cf search <query>");
+            formatter.error("Specify a search query. Usage: cmf search <query> (or comefort search <query>)");
             return;
         }
 

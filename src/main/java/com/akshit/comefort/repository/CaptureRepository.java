@@ -60,6 +60,17 @@ public class CaptureRepository {
         }
     }
 
+    public List<Capture> findByIdPrefix(String prefix) {
+        String sql = "SELECT * FROM captures WHERE id LIKE ? ORDER BY created_at DESC";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setString(1, prefix + "%");
+            return collectResults(ps);
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to find capture by prefix: " + e.getMessage(), e);
+        }
+    }
+
     /**
      * Returns all unprocessed captures (the inbox), most recent first.
      */
@@ -119,7 +130,7 @@ public class CaptureRepository {
 
         try (PreparedStatement ps = getConnection().prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-            return rs.getInt(1);
+            return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {
             throw new DatabaseException("Failed to count inbox: " + e.getMessage(), e);
         }
@@ -130,7 +141,7 @@ public class CaptureRepository {
 
         try (PreparedStatement ps = getConnection().prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-            return rs.getInt(1);
+            return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {
             throw new DatabaseException("Failed to count captures: " + e.getMessage(), e);
         }

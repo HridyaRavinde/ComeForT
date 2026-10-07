@@ -28,7 +28,7 @@ public class NoteCommand implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("  Usage: cf note <add|list|show|edit>");
+        System.out.println("  Usage: cmf note <add|list|show|edit> (or comefort note ...)");
         System.out.println();
         System.out.println("  Subcommands:");
         System.out.println("    add      Create a new note");
@@ -63,7 +63,7 @@ public class NoteCommand implements Runnable {
         @Override
         public void run() {
             if (titleWords == null || titleWords.isEmpty()) {
-                formatter.error("Note title is required. Usage: cf note add \"My Note\"");
+                formatter.error("Note title is required. Usage: cmf note add \"My Note\"");
                 return;
             }
 
@@ -119,7 +119,7 @@ public class NoteCommand implements Runnable {
 
             if (notes.isEmpty()) {
                 formatter.printSectionHeader("📝 Notes");
-                formatter.empty("No notes yet. Create one with: cf note add \"My Note\" -c \"Content\"");
+                formatter.empty("No notes yet. Create one with: cmf note add \"My Note\" -c \"Content\"");
                 formatter.newLine();
                 return;
             }
@@ -160,7 +160,7 @@ public class NoteCommand implements Runnable {
         @Override
         public void run() {
             if (identifierWords == null || identifierWords.isEmpty()) {
-                formatter.error("Specify a note ID or title. Usage: cf note show \"My Note\"");
+                formatter.error("Specify a note ID or title. Usage: cmf note show \"My Note\"");
                 return;
             }
 

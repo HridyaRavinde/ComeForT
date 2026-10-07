@@ -74,7 +74,7 @@ public class TodayCommand implements Runnable {
         if (!hasContent) {
             formatter.newLine();
             formatter.empty("Nothing urgent! You're all caught up. 🎉");
-            formatter.info("Capture something: cf c \"your next thought\"");
+            formatter.info("Capture something: cmf c \"your next thought\"");
         }
 
         formatter.newLine();

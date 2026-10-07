@@ -25,7 +25,7 @@ public class CommandFormBuilder {
     private Consumer<String> onExecute;
 
     /**
-     * @param commandPrefix e.g. "cf task add"
+     * @param commandPrefix e.g. "cmf task add" (or "comefort task add")
      */
     public CommandFormBuilder(String commandPrefix) {
         this.commandPrefix = commandPrefix;
@@ -39,7 +39,7 @@ public class CommandFormBuilder {
      * @param name        field name (e.g., "title")
      * @param label       display label (e.g., "Task Title")
      * @param placeholder prompt text
-     * @param cliHint     CLI usage hint (e.g., "cf task add <title>")
+     * @param cliHint     CLI usage hint (e.g., "cmf task add <title>")
      */
     public CommandFormBuilder addTextParam(String name, String label,
                                            String placeholder, String cliHint,

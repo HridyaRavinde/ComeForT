@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * Quick capture command — the heart of ComeFort.
- * Usage: cf c "HoneyChain needs better fraud alerts"
+ * Usage: cmf c "HoneyChain needs better fraud alerts"
  */
 @Command(
         name = "c",
@@ -34,7 +34,7 @@ public class CaptureCommand implements Runnable {
     @Override
     public void run() {
         if (words == null || words.isEmpty()) {
-            formatter.error("Nothing to capture. Usage: cf c \"your thought here\"");
+            formatter.error("Nothing to capture. Usage: cmf c \"your thought here\" (or comefort c ...)");
             return;
         }
 

@@ -12,6 +12,7 @@ import picocli.CommandLine;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -44,7 +45,15 @@ class AppCliTest {
     }
 
     @Test
-    @DisplayName("cf init initializes database and prints welcome instructions")
+    @DisplayName("App command is named 'comefort' with 'cmf' alias and 'cf' is removed")
+    void testCommandNaming() {
+        assertEquals("comefort", cmd.getCommandName());
+        assertTrue(List.of(cmd.getCommandSpec().aliases()).contains("cmf"));
+        assertFalse(List.of(cmd.getCommandSpec().aliases()).contains("cf"));
+    }
+
+    @Test
+    @DisplayName("cmf init initializes database and prints welcome instructions")
     void testInitCommand() {
         int exitCode = cmd.execute("init");
         assertEquals(0, exitCode);
@@ -54,7 +63,7 @@ class AppCliTest {
     }
 
     @Test
-    @DisplayName("cf c captures thoughts to inbox")
+    @DisplayName("cmf c captures thoughts to inbox")
     void testQuickCaptureCommand() {
         int exitCode = cmd.execute("c", "Implement", "new", "feature");
         assertEquals(0, exitCode);
@@ -63,7 +72,7 @@ class AppCliTest {
     }
 
     @Test
-    @DisplayName("cf project add and list workflow")
+    @DisplayName("cmf project add and list workflow")
     void testProjectWorkflow() {
         int addCode = cmd.execute("project", "add", "HoneyChain", "--desc", "Honey security");
         assertEquals(0, addCode);
@@ -76,7 +85,7 @@ class AppCliTest {
     }
 
     @Test
-    @DisplayName("cf task add, list, and done workflow")
+    @DisplayName("cmf task add, list, and done workflow")
     void testTaskWorkflow() {
         cmd.execute("project", "add", "DevVault");
 
@@ -98,7 +107,7 @@ class AppCliTest {
     }
 
     @Test
-    @DisplayName("cf note add, list, and show workflow")
+    @DisplayName("cmf note add, list, and show workflow")
     void testNoteWorkflow() {
         int addCode = cmd.execute("note", "add", "Architecture Notes", "-c", "Microservices vs Modular Monolith");
         assertEquals(0, addCode);
@@ -115,7 +124,7 @@ class AppCliTest {
     }
 
     @Test
-    @DisplayName("cf search finds cross-entity matches")
+    @DisplayName("cmf search finds cross-entity matches")
     void testSearchCommand() {
         cmd.execute("c", "idea: Quantum computing simulator");
         outStream.reset();
@@ -126,7 +135,7 @@ class AppCliTest {
     }
 
     @Test
-    @DisplayName("cf status and cf today report stats cleanly")
+    @DisplayName("cmf status and cmf today report stats cleanly")
     void testStatusAndTodayCommands() {
         int statusExit = cmd.execute("status");
         assertEquals(0, statusExit);

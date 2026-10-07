@@ -1,6 +1,6 @@
 # ◈ ComeFort — Developer Life OS
 
-> **Fast. Local-First. Zero-Latency. Built for developers.**
+> **Fast. Local-First. Instant Capture. Built for developers.**
 
 ComeFort is an offline-first productivity and task operating system designed specifically for software engineers. Instead of heavy, slow cloud web apps that lag behind your thought process, ComeFort gives you instantaneous capture, structured organization, and a dual-interface architecture: an ultra-fast **CLI** and a modern **JavaFX Desktop GUI**, both powered by the exact same shared domain and SQLite persistence engine.
 
@@ -8,18 +8,18 @@ ComeFort is an offline-first productivity and task operating system designed spe
 
 ## 🏗️ Architecture
 
-ComeFort follows strict **Clean Architecture** principles with clean separation of concerns and dependency inversion:
+ComeFort uses a pragmatic, production-grade **Layered Architecture** with clean separation of concerns and a unified composition root (`AppContext`):
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │                   Presentation Layer                   │
 │   ┌──────────────────────────┐  ┌──────────────────┐   │
-│   │    CLI (picocli 4.7)     │  │ JavaFX 22.0 GUI  │   │
+│   │    CLI (picocli 4.7)     │  │  JavaFX Desktop  │   │
 │   └─────────────┬────────────┘  └────────┬─────────┘   │
 └─────────────────┼────────────────────────┼─────────────┘
                   │                        │
 ┌─────────────────▼────────────────────────▼─────────────┐
-│                    Service Layer                       │
+│             ApplicationContext (Composition Root)      │
 │  [TaskService] [ProjectService] [NoteService]          │
 │  [CaptureService] [TodayService] [SearchService]       │
 └──────────────────────────┬─────────────────────────────┘
@@ -31,8 +31,9 @@ ComeFort follows strict **Clean Architecture** principles with clean separation 
 └──────────────────────────┬─────────────────────────────┘
                            │
 ┌──────────────────────────▼─────────────────────────────┐
-│                   Persistence Layer                    │
-│    DatabaseManager (SQLite with WAL mode & Foreign Keys)│
+│              Persistence & Migrations                  │
+│    DatabaseManager (SQLite WAL mode & Foreign Keys)    │
+│    MigrationRunner (Transactional schema_migrations)   │
 │    Stored locally at ~/.comefort/comefort.db           │
 └────────────────────────────────────────────────────────┘
 ```
@@ -41,11 +42,12 @@ ComeFort follows strict **Clean Architecture** principles with clean separation 
 
 ## ✨ Features
 
-- **⚡ Instant Quick Capture**: Capture fleeting thoughts into an unprocessed inbox instantly with zero friction (`cf c "..."`). Supports intelligent prefixes: `task:`, `note:`, `idea:`.
-- **🚀 Project Workspaces**: Group tasks, notes, and activity under distinct projects with filesystem path references.
-- **☐ Task Management**: Full task lifecycle with priorities (`low`, `medium`, `high`, `critical`), due dates (`today`, `tomorrow`, `yyyy-MM-dd`), and status transitions (`open`, `in_progress`, `done`, `archived`).
+- **⚡ Instant Quick Capture & Processing**: Capture raw thoughts to inbox (`cmf c "..."`). Convert captures into tasks, notes, or ideas with full metadata (`cmf inbox convert <id> --to <task|note|idea>`).
+- **👯 Twin Commands (`cmf` and `comefort`)**: Use either `cmf` or `comefort` interchangeably — exactly like `clear` and `cls`. Both commands share identical subcommands, options, and behavior.
+- **🚀 Project Workspaces**: Group tasks, notes, and activity under distinct projects with zero N+1 queries.
+- **☐ Task Management**: Full task lifecycle with priorities (`low`, `medium`, `high`, `critical`), due dates (`today`, `tomorrow`, `yyyy-MM-dd`), clearing due dates (`--clear-due`), and status transitions (`open`, `in_progress`, `done`, `archived`).
 - **📝 Project & Standalone Notes**: Markdown-ready note-taking tied to projects or standalone thoughts.
-- **🔎 Cross-Entity Full-Text Search**: Instant search across tasks, projects, notes, and captures.
+- **🔎 Cross-Entity Keyword Search**: Multi-field indexed search across tasks, projects, notes, and inbox items with disambiguation guards.
 - **🔥 Today Dashboard**: Real-time overview of overdue tasks, tasks due today, high-priority work, and inbox counters.
 - **🖥️ Dual CLI & JavaFX GUI**: Every CLI command, flag, and option is mirrored 1:1 in the GUI with dynamic CLI preview generation.
 
@@ -53,45 +55,53 @@ ComeFort follows strict **Clean Architecture** principles with clean separation 
 
 ## 💻 CLI Reference
 
-### Quick Capture
+> **Tip:** You can use `cmf` or `comefort` interchangeably for every command below.
+
+### Quick Capture & Inbox Processing
 ```bash
-cf c "Refactor authentication service"           # Capture thought to inbox
-cf c "task: Migrate database schema"             # Auto-categorized as task
-cf c "idea: Neural network pipeline"             # Auto-categorized as idea
-cf c "note: Redis caching strategies"            # Auto-categorized as note
-cf inbox                                         # Review unprocessed inbox items
+cmf c "Refactor authentication service"           # Capture thought to inbox
+cmf c "task: Migrate database schema"             # Auto-categorized as task
+cmf c "idea: Neural network pipeline"             # Auto-categorized as idea
+cmf c "note: Redis caching strategies"            # Auto-categorized as note
+cmf inbox                                         # Review unprocessed inbox items
+cmf inbox convert <id> --to task -p HoneyChain -d tomorrow --priority high
+cmf inbox convert <id> --to note -p HoneyChain
+cmf inbox convert <id> --to idea
+cmf inbox done <id>                               # Mark capture processed / archive
+cmf inbox delete <id>                             # Delete capture
 ```
 
 ### Projects
 ```bash
-cf project add HoneyChain --desc "Supply chain on-chain" --path "C:\HoneyChain"
-cf project list                                  # List all projects with task/note metrics
-cf project show HoneyChain                       # Detailed view with open tasks & recent logs
+cmf project add HoneyChain --desc "Supply chain on-chain" --path "C:\HoneyChain"
+cmf project list                                  # List all projects with task/note metrics
+cmf project show HoneyChain                       # Detailed view with open tasks & recent logs
 ```
 
 ### Tasks
 ```bash
-cf task add "Implement OAuth2 flow" -p HoneyChain -d today --priority high
-cf task list --project HoneyChain --status open --priority high
-cf task done "OAuth2"                            # Matches short ID or title fragment
-cf task edit <id> -t "New Title" --desc "Details" --priority critical -d tomorrow -s in_progress
-cf task delete <id>
+cmf task add "Implement OAuth2 flow" -p HoneyChain -d today --priority high
+cmf task list --project HoneyChain --status open --priority high
+cmf task done "OAuth2"                            # Matches short ID or title fragment
+cmf task edit <id> -t "New Title" --desc "Details" --priority critical -d tomorrow -s in_progress
+cmf task edit <id> --clear-due                    # Remove due date from task
+cmf task delete <id>
 ```
 
 ### Notes
 ```bash
-cf note add "Architecture decisions" -p HoneyChain -c "Chose event sourcing for audits"
-cf note list -p HoneyChain
-cf note show "Architecture"
-cf note edit <id> -t "Updated decisions" -c "New details"
+cmf note add "Architecture decisions" -p HoneyChain -c "Chose event sourcing for audits"
+cmf note list -p HoneyChain
+cmf note show "Architecture"
+cmf note edit <id> -t "Updated decisions" -c "New details"
 ```
 
 ### Search, Today & Status
 ```bash
-cf search "OAuth"                               # Searches across tasks, projects, notes, inbox
-cf today                                        # Daily dashboard (overdue, due today, high priority)
-cf status                                       # Global counts & recent activity log
-cf gui                                          # Launches the desktop GUI
+cmf search "OAuth"                               # Searches across tasks, projects, notes, inbox
+cmf today                                        # Daily dashboard (overdue, due today, high priority)
+cmf status                                       # Global counts & recent activity log
+cmf gui                                          # Launches the desktop GUI
 ```
 
 ---
@@ -100,9 +110,11 @@ cf gui                                          # Launches the desktop GUI
 
 Launch the desktop interface directly from the CLI:
 ```bash
-cf gui
+cmf gui
 # Or:
-cf --gui
+comefort gui
+# Or flag style:
+cmf --gui
 ```
 
 The GUI includes:
@@ -129,6 +141,9 @@ Execute the comprehensive JUnit 5 integration test suite:
 ```bash
 ./gradlew run --args="--help"
 ./gradlew run --args="today"
+# Or using the dev runner:
+.\dev today
+.\dev gui
 ```
 
 ### Building Distribution Binaries
@@ -136,13 +151,13 @@ Execute the comprehensive JUnit 5 integration test suite:
 ComeFort can be packaged into two types of ready-to-distribute public packages:
 
 #### 1. 🪟 Native Standalone Package (Zero-Prerequisites — No Java Needed)
-Generates a standalone Windows distribution with `ComeFort.exe` (GUI), `cf.exe` (CLI), and a bundled stripped runtime:
+Generates a standalone Windows distribution with `ComeFort.exe` (GUI), `comefort.exe` / `cmf.exe` (CLI twins), and a bundled stripped runtime:
 ```bash
 ./gradlew packageNativeZip
 ```
 Output: `build/distributions/ComeFort-v0.1.0-windows-x64.zip`
 - **GUI**: Double-click `ComeFort.exe` — launches the desktop app directly.
-- **CLI**: Run `cf.exe <command>` in PowerShell / CMD without needing Java installed on the machine.
+- **CLI**: Run `cmf.exe <command>` or `comefort.exe <command>` in PowerShell / CMD without needing Java installed on the machine.
 
 #### 2. 📦 Portable Distribution ZIP (Lightweight ~24MB)
 Generates the cross-platform bundle containing batch launchers and scripts:
@@ -152,7 +167,7 @@ Generates the cross-platform bundle containing batch launchers and scripts:
 Output: `build/distributions/comefort-0.1.0.zip`
 Inside the extracted folder:
 - **`ComeFort-GUI.bat`**: Double-click to launch the GUI immediately.
-- **`ComeFort-CLI.bat`**: Double-click to launch an interactive terminal with `cf` pre-configured.
-- **`install.bat`**: 1-click setup that adds `cf` to the user's system `PATH` and creates a Desktop shortcut.
+- **`ComeFort-CLI.bat`**: Double-click to launch an interactive terminal with `cmf` and `comefort` pre-configured.
+- **`install.bat`**: 1-click setup that adds `cmf` and `comefort` to the user's system `PATH` and creates a Desktop shortcut.
 - **`uninstall.bat`**: 1-click clean removal.
 

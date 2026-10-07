@@ -1,6 +1,7 @@
 package com.akshit.comefort.repository;
 
 import com.akshit.comefort.core.Project;
+import com.akshit.comefort.core.ProjectSummary;
 import com.akshit.comefort.db.DatabaseManager;
 import com.akshit.comefort.exception.DatabaseException;
 import com.akshit.comefort.util.DateTimeUtil;
@@ -10,7 +11,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -154,7 +157,7 @@ public class ProjectRepository {
 
         try (PreparedStatement ps = getConnection().prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-            return rs.getInt(1);
+            return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {
             throw new DatabaseException("Failed to count projects: " + e.getMessage(), e);
         }
@@ -180,6 +183,57 @@ public class ProjectRepository {
             return collectResults(ps);
         } catch (SQLException e) {
             throw new DatabaseException("Failed to search projects: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Returns project summaries with aggregated task and note counts in a single SQL query.
+     * Prevents N+1 query problem.
+     */
+    public List<ProjectSummary> findProjectSummaries() {
+        String sql = """
+                SELECT 
+                    p.id, p.name, p.description, p.path, p.created_at, p.updated_at,
+                    COUNT(DISTINCT t.id) AS total_tasks,
+                    COUNT(DISTINCT CASE WHEN t.status != 'DONE' AND t.status != 'ARCHIVED' THEN t.id END) AS open_tasks,
+                    COUNT(DISTINCT n.id) AS total_notes
+                FROM projects p
+                LEFT JOIN tasks t ON p.id = t.project_id
+                LEFT JOIN notes n ON p.id = n.project_id
+                GROUP BY p.id
+                ORDER BY p.name
+                """;
+
+        List<ProjectSummary> summaries = new ArrayList<>();
+        try (PreparedStatement ps = getConnection().prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Project project = mapRow(rs);
+                int totalTasks = rs.getInt("total_tasks");
+                int openTasks = rs.getInt("open_tasks");
+                int totalNotes = rs.getInt("total_notes");
+                summaries.add(new ProjectSummary(project, totalTasks, openTasks, totalNotes));
+            }
+            return summaries;
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to load project summaries: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Returns a map of project ID to project name in a single query.
+     */
+    public Map<String, String> getProjectNameMap() {
+        String sql = "SELECT id, name FROM projects";
+        Map<String, String> map = new HashMap<>();
+        try (PreparedStatement ps = getConnection().prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                map.put(rs.getString("id"), rs.getString("name"));
+            }
+            return map;
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to load project name map: " + e.getMessage(), e);
         }
     }
 

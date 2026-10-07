@@ -5,6 +5,7 @@ import com.akshit.comefort.core.enums.ActionType;
 import com.akshit.comefort.core.enums.EntityType;
 import com.akshit.comefort.core.enums.TaskPriority;
 import com.akshit.comefort.core.enums.TaskStatus;
+import com.akshit.comefort.exception.AmbiguousEntityException;
 import com.akshit.comefort.exception.EntityNotFoundException;
 import com.akshit.comefort.repository.TaskRepository;
 import com.akshit.comefort.util.IdGenerator;
@@ -63,14 +64,18 @@ public class TaskService {
      * Updates a task's fields. Only non-null values are applied.
      */
     public Task update(String id, String title, String description,
-                       TaskPriority priority, LocalDate dueDate,
+                       TaskPriority priority, LocalDate dueDate, boolean clearDueDate,
                        TaskStatus status, String projectId) {
         Task task = getById(id);
 
         if (title != null && !title.isBlank()) task.setTitle(title);
         if (description != null) task.setDescription(description);
         if (priority != null) task.setPriority(priority);
-        if (dueDate != null) task.setDueDate(dueDate);
+        if (clearDueDate) {
+            task.setDueDate(null);
+        } else if (dueDate != null) {
+            task.setDueDate(dueDate);
+        }
         if (status != null) task.setStatus(status);
         if (projectId != null) task.setProjectId(projectId);
 
@@ -80,6 +85,15 @@ public class TaskService {
                 ActionType.UPDATED, "Updated task: " + task.getTitle());
 
         return task;
+    }
+
+    /**
+     * Overload for backward compatibility.
+     */
+    public Task update(String id, String title, String description,
+                       TaskPriority priority, LocalDate dueDate,
+                       TaskStatus status, String projectId) {
+        return update(id, title, description, priority, dueDate, false, status, projectId);
     }
 
     /**
@@ -112,11 +126,23 @@ public class TaskService {
         // Try ID prefix
         var byPrefix = taskRepository.findByIdPrefix(idOrFragment);
         if (byPrefix.size() == 1) return byPrefix.getFirst();
+        if (byPrefix.size() > 1) {
+            List<String> candidates = byPrefix.stream()
+                    .map(t -> String.format("%s - %s", t.getId().substring(0, 8), t.getTitle()))
+                    .toList();
+            throw new AmbiguousEntityException("Task", idOrFragment, candidates);
+        }
 
         // Try title fragment
         var byTitle = taskRepository.findByTitleFragment(idOrFragment);
         if (byTitle.isEmpty()) {
             throw new EntityNotFoundException("Task", idOrFragment);
+        }
+        if (byTitle.size() > 1) {
+            List<String> candidates = byTitle.stream()
+                    .map(t -> String.format("%s - %s", t.getId().substring(0, 8), t.getTitle()))
+                    .toList();
+            throw new AmbiguousEntityException("Task", idOrFragment, candidates);
         }
         return byTitle.getFirst();
     }

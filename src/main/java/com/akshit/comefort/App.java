@@ -17,7 +17,8 @@ import picocli.CommandLine.Command;
  * to picocli for command routing.</p>
  */
 @Command(
-        name = "cf",
+        name = "comefort",
+        aliases = {"cmf"},
         description = "ComeFort — Your Local-First Developer Life OS",
         version = "0.1.0",
         mixinStandardHelpOptions = true,
@@ -50,31 +51,31 @@ public class App implements Runnable {
     private final TodayService todayService;
 
     public App() {
-        this(new DatabaseManager());
+        this(AppContext.getInstance());
     }
 
     public App(DatabaseManager dbManager) {
-        // Wire the object graph manually (no DI framework needed for V0.1)
-        this.dbManager = dbManager;
+        this(new AppContext(dbManager));
+    }
+
+    public App(AppContext context) {
         this.formatter = new CliFormatter();
+        this.dbManager = context.getDbManager();
 
-        // Repositories
-        this.projectRepository = new ProjectRepository(dbManager);
-        this.taskRepository = new TaskRepository(dbManager);
-        this.noteRepository = new NoteRepository(dbManager);
-        this.captureRepository = new CaptureRepository(dbManager);
-        this.activityRepository = new ActivityRepository(dbManager);
-        this.configRepository = new ConfigRepository(dbManager);
+        this.projectRepository = context.getProjectRepository();
+        this.taskRepository = context.getTaskRepository();
+        this.noteRepository = context.getNoteRepository();
+        this.captureRepository = context.getCaptureRepository();
+        this.activityRepository = context.getActivityRepository();
+        this.configRepository = context.getConfigRepository();
 
-        // Services
-        this.activityService = new ActivityService(activityRepository);
-        this.projectService = new ProjectService(projectRepository, activityService);
-        this.taskService = new TaskService(taskRepository, activityService);
-        this.noteService = new NoteService(noteRepository, activityService);
-        this.captureService = new CaptureService(captureRepository, activityService);
-        this.searchService = new SearchService(taskRepository, projectRepository,
-                noteRepository, captureRepository);
-        this.todayService = new TodayService(taskService, captureService, activityService);
+        this.activityService = context.getActivityService();
+        this.projectService = context.getProjectService();
+        this.taskService = context.getTaskService();
+        this.noteService = context.getNoteService();
+        this.captureService = context.getCaptureService();
+        this.searchService = context.getSearchService();
+        this.todayService = context.getTodayService();
     }
 
     @Override
@@ -112,8 +113,13 @@ public class App implements Runnable {
                 new InitCommand(app.dbManager, app.formatter));
         cmd.addSubcommand("c",
                 new CaptureCommand(app.captureService, app.formatter));
-        cmd.addSubcommand("inbox",
-                new InboxCommand(app.captureService, app.formatter));
+        // Inbox command with subcommands
+        CommandLine inboxCmd = new CommandLine(new InboxCommand(app.captureService, app.formatter));
+        inboxCmd.addSubcommand("list", new InboxCommand.ListInbox(app.captureService, app.formatter));
+        inboxCmd.addSubcommand("convert", new InboxCommand.Convert(app.captureService, app.projectService, app.formatter));
+        inboxCmd.addSubcommand("done", new InboxCommand.Process(app.captureService, app.formatter));
+        inboxCmd.addSubcommand("delete", new InboxCommand.Delete(app.captureService, app.formatter));
+        cmd.addSubcommand("inbox", inboxCmd);
         cmd.addSubcommand("gui",
                 new GuiCommand());
 
@@ -167,8 +173,22 @@ public class App implements Runnable {
 
         // Set up execution strategy that initializes DB before every command
         cmd.setExecutionStrategy(parseResult -> {
-            // Initialize database before any command (except help)
-            app.ensureInitialized();
+            // Check if help or version was requested anywhere in command hierarchy
+            boolean isHelpRequested = parseResult.isUsageHelpRequested() || parseResult.isVersionHelpRequested();
+            CommandLine.ParseResult pr = parseResult;
+            while (pr.hasSubcommand()) {
+                pr = pr.subcommand();
+                if (pr.isUsageHelpRequested() || pr.isVersionHelpRequested() || "help".equals(pr.commandSpec().name())) {
+                    isHelpRequested = true;
+                    break;
+                }
+            }
+
+            boolean isGuiCommand = parseResult.hasSubcommand() && "gui".equals(parseResult.subcommand().commandSpec().name());
+
+            if (!isHelpRequested && !isGuiCommand) {
+                app.ensureInitialized();
+            }
 
             // Execute the command
             return new CommandLine.RunLast().execute(parseResult);
@@ -180,7 +200,7 @@ public class App implements Runnable {
                 app.formatter.error(ex.getMessage());
             } else {
                 app.formatter.error("Unexpected error: " + ex.getMessage());
-                if (System.getenv("CF_DEBUG") != null) {
+                if (System.getenv("COMEFORT_DEBUG") != null || System.getenv("CMF_DEBUG") != null) {
                     ex.printStackTrace();
                 }
             }

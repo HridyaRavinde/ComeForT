@@ -39,11 +39,11 @@ public class InitCommand implements Runnable {
             formatter.success("ComeFort initialized successfully!");
             formatter.info("Database: " + dbManager.getDbFilePath());
             formatter.newLine();
-            formatter.info("Get started:");
-            System.out.println("    cf c \"your first thought\"     — Quick capture");
-            System.out.println("    cf project add MyProject      — Create a project");
-            System.out.println("    cf task add \"Do something\"    — Add a task");
-            System.out.println("    cf today                      — See your dashboard");
+            formatter.info("Get started (use either 'cmf' or 'comefort'):");
+            System.out.println("    cmf c \"your first thought\"     — Quick capture");
+            System.out.println("    cmf project add MyProject      — Create a project");
+            System.out.println("    cmf task add \"Do something\"    — Add a task");
+            System.out.println("    cmf today                      — See your dashboard");
             formatter.newLine();
         } else {
             formatter.success("ComeFort database verified.");

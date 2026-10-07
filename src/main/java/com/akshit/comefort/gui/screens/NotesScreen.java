@@ -14,10 +14,10 @@ import java.util.List;
 
 /**
  * Notes screen — GUI equivalent of:
- *   - cf note add <title> [-p project] [-c content]
- *   - cf note list [-p project]
- *   - cf note show <id|title-fragment>
- *   - cf note edit <id> [-t title] [-c content] [-p project]
+ *   - cmf note add <title> [-p project] [-c content]
+ *   - cmf note list [-p project]
+ *   - cmf note show <id|title-fragment>
+ *   - cmf note edit <id> [-t title] [-c content] [-p project]
  *
  * Every flag and parameter has a GUI control.
  */
@@ -51,7 +51,7 @@ public class NotesScreen {
         header.getChildren().addAll(title, spacer, addBtn);
         root.getChildren().add(header);
 
-        // Filter by project — CLI: cf note list -p <project>
+        // Filter by project — CLI: cmf note list -p <project>
         HBox filterBar = new HBox(12);
         filterBar.setAlignment(Pos.CENTER_LEFT);
         Label filterLabel = new Label("Filter:");
@@ -60,7 +60,7 @@ public class NotesScreen {
         projectFilter.setPromptText("All Projects");
         projectFilter.getItems().add("All");
         projectService.listAll().forEach(p -> projectFilter.getItems().add(p.getName()));
-        projectFilter.setTooltip(new Tooltip("CLI: cf note list -p <project>"));
+        projectFilter.setTooltip(new Tooltip("CLI: cmf note list -p <project>"));
         Button applyBtn = new Button("Apply");
         applyBtn.getStyleClass().add("btn-secondary");
         applyBtn.setOnAction(e -> {
@@ -96,7 +96,7 @@ public class NotesScreen {
         root.getChildren().add(filterBar);
 
         // CLI hint
-        Label cliHint = new Label("CLI: cf note list [-p project]  |  cf note add <title> -p project -c \"content\"");
+        Label cliHint = new Label("CLI: cmf note list [-p project]  |  cmf note add <title> -p project -c \"content\"");
         cliHint.getStyleClass().add("page-subtitle");
         root.getChildren().add(cliHint);
 
@@ -121,7 +121,7 @@ public class NotesScreen {
     }
 
     /**
-     * Builds a note card — clickable to show detail (cf note show).
+     * Builds a note card — clickable to show detail (cmf note show).
      */
     private VBox buildNoteCard(Note note) {
         VBox card = new VBox(6);
@@ -149,16 +149,16 @@ public class NotesScreen {
         Label timeLabel = new Label(DateTimeUtil.relativeTime(note.getUpdatedAt()));
         timeLabel.getStyleClass().add("label-muted");
 
-        // View button — CLI: cf note show <id>
+        // View button — CLI: cmf note show <id>
         Button viewBtn = new Button("👁");
         viewBtn.getStyleClass().add("btn-ghost");
-        viewBtn.setTooltip(new Tooltip("CLI: cf note show " + note.getShortId()));
+        viewBtn.setTooltip(new Tooltip("CLI: cmf note show " + note.getShortId()));
         viewBtn.setOnAction(e -> showNoteDetail(note));
 
-        // Edit button — CLI: cf note edit <id>
+        // Edit button — CLI: cmf note edit <id>
         Button editBtn = new Button("✏");
         editBtn.getStyleClass().add("btn-ghost");
-        editBtn.setTooltip(new Tooltip("CLI: cf note edit " + note.getShortId()));
+        editBtn.setTooltip(new Tooltip("CLI: cmf note edit " + note.getShortId()));
         editBtn.setOnAction(e -> showEditNoteDialog(note));
 
         titleRow.getChildren().addAll(titleLabel, projLabel, timeLabel, viewBtn, editBtn);
@@ -176,7 +176,7 @@ public class NotesScreen {
 
     /**
      * Add Note dialog — GUI equivalent of:
-     *   cf note add <title> [-p project] [-c content]
+     *   cmf note add <title> [-p project] [-c content]
      */
     private void showAddNoteDialog() {
         Dialog<Void> dialog = new Dialog<>();
@@ -186,7 +186,7 @@ public class NotesScreen {
         List<String> projectNames = projectService.listAll().stream()
                 .map(p -> p.getName()).toList();
 
-        CommandFormBuilder form = new CommandFormBuilder("cf note add")
+        CommandFormBuilder form = new CommandFormBuilder("cmf note add")
                 .addTextParam("title", "Note Title", "e.g., Sepolia Architecture",
                         "<title> (positional, required)", true)
                 .addChoiceOption("project", "Project", projectNames, null,
@@ -233,7 +233,7 @@ public class NotesScreen {
     }
 
     /**
-     * Show note detail — GUI equivalent of `cf note show <id|title>`.
+     * Show note detail — GUI equivalent of `cmf note show <id|title>`.
      */
     private void showNoteDetail(Note note) {
         Dialog<Void> dialog = new Dialog<>();
@@ -265,7 +265,7 @@ public class NotesScreen {
         contentArea.setWrapText(true);
         contentArea.setPrefRowCount(10);
 
-        Label cliLabel = new Label("CLI: cf note show " + note.getShortId());
+        Label cliLabel = new Label("CLI: cmf note show " + note.getShortId());
         cliLabel.getStyleClass().add("command-preview");
 
         content.getChildren().addAll(titleLabel, created, updated,
@@ -281,7 +281,7 @@ public class NotesScreen {
 
     /**
      * Edit note dialog — GUI equivalent of:
-     *   cf note edit <id> [-t title] [-c content] [-p project]
+     *   cmf note edit <id> [-t title] [-c content] [-p project]
      */
     private void showEditNoteDialog(Note note) {
         Dialog<Void> dialog = new Dialog<>();
@@ -291,7 +291,7 @@ public class NotesScreen {
         List<String> projectNames = projectService.listAll().stream()
                 .map(p -> p.getName()).toList();
 
-        CommandFormBuilder form = new CommandFormBuilder("cf note edit " + note.getShortId())
+        CommandFormBuilder form = new CommandFormBuilder("cmf note edit " + note.getShortId())
                 .addTextOption("title", "Title", note.getTitle(),
                         "-t", "-t \"new title\"")
                 .addTextAreaParam("content", "Content", note.getContent(),

@@ -4,6 +4,7 @@ import com.akshit.comefort.cli.CliFormatter;
 import com.akshit.comefort.core.ActivityEntry;
 import com.akshit.comefort.core.Note;
 import com.akshit.comefort.core.Project;
+import com.akshit.comefort.core.ProjectSummary;
 import com.akshit.comefort.core.Task;
 import com.akshit.comefort.service.ActivityService;
 import com.akshit.comefort.service.NoteService;
@@ -33,7 +34,7 @@ public class ProjectCommand implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("  Usage: cf project <add|list|show>");
+        System.out.println("  Usage: cmf project <add|list|show> (or comefort project ...)");
         System.out.println();
         System.out.println("  Subcommands:");
         System.out.println("    add      Create a new project");
@@ -86,20 +87,18 @@ public class ProjectCommand implements Runnable {
 
         @Override
         public void run() {
-            List<Project> projects = projectService.listAll();
+            List<ProjectSummary> summaries = projectService.getProjectSummaries();
 
-            if (projects.isEmpty()) {
+            if (summaries.isEmpty()) {
                 formatter.printSectionHeader("🚀 Projects");
-                formatter.empty("No projects yet. Create one with: cf project add MyProject");
+                formatter.empty("No projects yet. Create one with: cmf project add MyProject");
                 formatter.newLine();
                 return;
             }
 
-            formatter.printSectionHeader("🚀 Projects (" + projects.size() + ")");
-            for (Project project : projects) {
-                int taskCount = taskService.listAll(project.getId(), null, null).size();
-                int noteCount = noteService.listByProject(project.getId()).size();
-                formatter.printProjectLine(project, taskCount, noteCount);
+            formatter.printSectionHeader("🚀 Projects (" + summaries.size() + ")");
+            for (ProjectSummary s : summaries) {
+                formatter.printProjectLine(s.project(), s.totalTasks(), s.totalNotes());
             }
             formatter.newLine();
         }
@@ -130,7 +129,7 @@ public class ProjectCommand implements Runnable {
         @Override
         public void run() {
             if (nameWords == null || nameWords.isEmpty()) {
-                formatter.error("Specify a project name. Usage: cf project show MyProject");
+                formatter.error("Specify a project name. Usage: cmf project show MyProject");
                 return;
             }
 

@@ -225,10 +225,10 @@ public class TaskRepository {
     public int countByStatus(TaskStatus status) {
         String sql = "SELECT COUNT(*) FROM tasks WHERE status = ?";
 
-        try (PreparedStatement ps = getConnection().prepareStatement(sql);) {
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
             ps.setString(1, status.name());
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.getInt(1);
+                return rs.next() ? rs.getInt(1) : 0;
             }
         } catch (SQLException e) {
             throw new DatabaseException("Failed to count tasks: " + e.getMessage(), e);
@@ -243,7 +243,7 @@ public class TaskRepository {
 
         try (PreparedStatement ps = getConnection().prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-            return rs.getInt(1);
+            return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {
             throw new DatabaseException("Failed to count tasks: " + e.getMessage(), e);
         }

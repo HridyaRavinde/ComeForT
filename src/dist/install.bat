@@ -23,7 +23,7 @@ echo   Setup Complete!
 echo.
 echo   How to use:
 echo     1. GUI: Double-click 'ComeFort' shortcut on your Desktop or run 'ComeFort-GUI.bat'.
-echo     2. CLI: Open a NEW terminal (CMD / PowerShell) and type 'cf'.
+echo     2. CLI: Open a NEW terminal (CMD / PowerShell) and type 'cmf' or 'comefort'.
 echo ======================================================================
 echo.
 pause

@@ -3,6 +3,7 @@ package com.akshit.comefort.gui.screens;
 import com.akshit.comefort.core.ActivityEntry;
 import com.akshit.comefort.core.Note;
 import com.akshit.comefort.core.Project;
+import com.akshit.comefort.core.ProjectSummary;
 import com.akshit.comefort.core.Task;
 import com.akshit.comefort.gui.components.CommandFormBuilder;
 import com.akshit.comefort.service.*;
@@ -15,9 +16,9 @@ import java.util.List;
 
 /**
  * Projects screen — GUI equivalent of:
- *   - cf project add <name> [--desc] [--path]
- *   - cf project list
- *   - cf project show <name>
+ *   - cmf project add <name> [--desc] [--path]
+ *   - cmf project list
+ *   - cmf project show <name>
  *
  * Every CLI parameter is represented as a GUI control.
  */
@@ -57,14 +58,14 @@ public class ProjectsScreen {
         root.getChildren().add(header);
 
         // CLI hint
-        Label cliHint = new Label("CLI: cf project list  |  cf project add <name> --desc \"...\" --path \"...\"");
+        Label cliHint = new Label("CLI: cmf project list  |  cmf project add <name> --desc \"...\" --path \"...\"");
         cliHint.getStyleClass().add("page-subtitle");
         root.getChildren().add(cliHint);
 
-        // Project list — equivalent of `cf project list`
-        List<Project> projects = projectService.listAll();
+        // Project list — equivalent of `cmf project list` (loaded via single aggregate query)
+        List<ProjectSummary> summaries = projectService.getProjectSummaries();
 
-        if (projects.isEmpty()) {
+        if (summaries.isEmpty()) {
             VBox empty = new VBox(8);
             empty.getStyleClass().add("empty-state");
             Label emptyTitle = new Label("No projects yet");
@@ -74,8 +75,8 @@ public class ProjectsScreen {
             empty.getChildren().addAll(emptyTitle, emptySub);
             root.getChildren().add(empty);
         } else {
-            for (Project project : projects) {
-                root.getChildren().add(buildProjectCard(project));
+            for (ProjectSummary summary : summaries) {
+                root.getChildren().add(buildProjectCard(summary));
             }
         }
 
@@ -83,10 +84,11 @@ public class ProjectsScreen {
     }
 
     /**
-     * Builds a project card — equivalent of `cf project show <name>`.
+     * Builds a project card — equivalent of `cmf project show <name>`.
      * Shows tasks count, notes count, description, path.
      */
-    private VBox buildProjectCard(Project project) {
+    private VBox buildProjectCard(ProjectSummary summary) {
+        Project project = summary.project();
         VBox card = new VBox(8);
         card.getStyleClass().add("card");
         card.setPadding(new Insets(16));
@@ -100,10 +102,10 @@ public class ProjectsScreen {
         Region sp = new Region();
         HBox.setHgrow(sp, Priority.ALWAYS);
 
-        // Show details button — equivalent of `cf project show <name>`
+        // Show details button — equivalent of `cmf project show <name>`
         Button showBtn = new Button("View Details");
         showBtn.getStyleClass().add("btn-ghost");
-        showBtn.setTooltip(new Tooltip("CLI: cf project show " + project.getName()));
+        showBtn.setTooltip(new Tooltip("CLI: cmf project show " + project.getName()));
         showBtn.setOnAction(e -> showProjectDetail(project));
 
         nameRow.getChildren().addAll(name, sp, showBtn);
@@ -121,17 +123,12 @@ public class ProjectsScreen {
             card.getChildren().add(path);
         }
 
-        // Stats
-        int taskCount = taskService.listAll(project.getId(), null, null).size();
-        long openTasks = taskService.listAll(project.getId(), null, null).stream()
-                .filter(Task::isOpen).count();
-        int noteCount = noteService.listByProject(project.getId()).size();
-
+        // Stats — pre-aggregated in single query
         HBox stats = new HBox(16);
         stats.setPadding(new Insets(4, 0, 0, 0));
-        Label taskLabel = new Label("☐ " + taskCount + " tasks (" + openTasks + " open)");
+        Label taskLabel = new Label("☐ " + summary.totalTasks() + " tasks (" + summary.openTasks() + " open)");
         taskLabel.getStyleClass().add("label-small");
-        Label noteLabel = new Label("📝 " + noteCount + " notes");
+        Label noteLabel = new Label("📝 " + summary.totalNotes() + " notes");
         noteLabel.getStyleClass().add("label-small");
         stats.getChildren().addAll(taskLabel, noteLabel);
         card.getChildren().add(stats);
@@ -141,7 +138,7 @@ public class ProjectsScreen {
 
     /**
      * Shows the Add Project dialog.
-     * GUI equivalent of: cf project add <name> --desc "..." --path "..."
+     * GUI equivalent of: cmf project add <name> --desc "..." --path "..."
      * Every flag has a matching control.
      */
     private void showAddProjectDialog() {
@@ -149,7 +146,7 @@ public class ProjectsScreen {
         dialog.setTitle("Add Project");
         dialog.setHeaderText("Create a new project");
 
-        CommandFormBuilder form = new CommandFormBuilder("cf project add")
+        CommandFormBuilder form = new CommandFormBuilder("cmf project add")
                 .addTextParam("name", "Project Name", "e.g., HoneyChain",
                         "<name> (positional, required)", true)
                 .addTextOption("description", "Description", "Project description",
@@ -186,7 +183,7 @@ public class ProjectsScreen {
     }
 
     /**
-     * Shows project detail view — equivalent of `cf project show <name>`.
+     * Shows project detail view — equivalent of `cmf project show <name>`.
      */
     private void showProjectDetail(Project project) {
         Dialog<Void> dialog = new Dialog<>();
@@ -270,7 +267,7 @@ public class ProjectsScreen {
 
         // CLI hint
         content.getChildren().add(new Separator());
-        Label cliLabel = new Label("CLI: cf project show " + project.getName());
+        Label cliLabel = new Label("CLI: cmf project show " + project.getName());
         cliLabel.getStyleClass().add("command-preview");
         content.getChildren().add(cliLabel);
 

@@ -90,4 +90,29 @@ class ProjectServiceTest {
         List<Project> all = projectService.listAll();
         assertEquals(2, all.size());
     }
+
+    @Test
+    @DisplayName("Ambiguous project fragment match throws AmbiguousEntityException")
+    void testAmbiguousResolve() {
+        projectService.create("HoneyChain Core", null, null);
+        projectService.create("HoneyChain Mobile", null, null);
+
+        assertThrows(com.akshit.comefort.exception.AmbiguousEntityException.class,
+                () -> projectService.resolve("HoneyChain"));
+    }
+
+    @Test
+    @DisplayName("Project summaries and project name map return aggregated results without N+1 queries")
+    void testProjectSummariesAndNameMap() {
+        Project p1 = projectService.create("Alpha", null, null);
+        Project p2 = projectService.create("Beta", null, null);
+
+        var summaries = projectService.getProjectSummaries();
+        assertEquals(2, summaries.size());
+
+        var nameMap = projectService.getProjectNameMap();
+        assertEquals(2, nameMap.size());
+        assertEquals("Alpha", nameMap.get(p1.getId()));
+        assertEquals("Beta", nameMap.get(p2.getId()));
+    }
 }

@@ -14,14 +14,15 @@ import javafx.scene.layout.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Tasks screen — GUI equivalent of:
- *   - cf task add <title> [-p project] [-d due] [--priority priority]
- *   - cf task list [--project name] [--status status] [--priority priority]
- *   - cf task done <id|title-fragment>
- *   - cf task edit <id> [-t title] [--desc desc] [--priority] [-d due] [-s status] [-p project]
- *   - cf task delete <id|title-fragment>
+ *   - cmf task add <title> [-p project] [-d due] [--priority priority]
+ *   - cmf task list [--project name] [--status status] [--priority priority]
+ *   - cmf task done <id|title-fragment>
+ *   - cmf task edit <id> [-t title] [--desc desc] [--priority] [-d due] [-s status] [-p project]
+ *   - cmf task delete <id|title-fragment>
  *
  * Every single flag and parameter is represented in the GUI.
  */
@@ -55,17 +56,18 @@ public class TasksScreen {
         header.getChildren().addAll(title, spacer, addBtn);
         root.getChildren().add(header);
 
-        // Filter bar — GUI equivalent of cf task list --project X --status Y --priority Z
+        // Filter bar — GUI equivalent of cmf task list --project X --status Y --priority Z
         HBox filterBar = buildFilterBar(root);
         root.getChildren().add(filterBar);
 
         // CLI hint
-        Label cliHint = new Label("CLI: cf task list [--project name] [--status status] [--priority priority]");
+        Label cliHint = new Label("CLI: cmf task list [--project name] [--status status] [--priority priority]");
         cliHint.getStyleClass().add("page-subtitle");
         root.getChildren().add(cliHint);
 
         // Task list
         List<Task> tasks = taskService.listAll(null, null, null);
+        Map<String, String> projectNames = projectService.getProjectNameMap();
         if (tasks.isEmpty()) {
             VBox empty = new VBox(8);
             empty.getStyleClass().add("empty-state");
@@ -77,7 +79,7 @@ public class TasksScreen {
             root.getChildren().add(empty);
         } else {
             for (Task task : tasks) {
-                root.getChildren().add(buildTaskRow(task));
+                root.getChildren().add(buildTaskRow(task, projectNames));
             }
         }
 
@@ -115,7 +117,7 @@ public class TasksScreen {
 
         Button applyBtn = new Button("Apply Filters");
         applyBtn.getStyleClass().add("btn-secondary");
-        applyBtn.setTooltip(new Tooltip("CLI: cf task list --project X --status Y --priority Z"));
+        applyBtn.setTooltip(new Tooltip("CLI: cmf task list --project X --status Y --priority Z"));
         applyBtn.setOnAction(e -> {
             String projName = projectFilter.getValue();
             String statusVal = statusFilter.getValue();
@@ -160,8 +162,9 @@ public class TasksScreen {
                 empty.getChildren().add(emptyTitle);
                 root.getChildren().add(empty);
             } else {
+                Map<String, String> pNames = projectService.getProjectNameMap();
                 for (Task task : filtered) {
-                    root.getChildren().add(buildTaskRow(task));
+                    root.getChildren().add(buildTaskRow(task, pNames));
                 }
             }
         });
@@ -175,15 +178,15 @@ public class TasksScreen {
     /**
      * Builds a single task row with action buttons.
      */
-    private HBox buildTaskRow(Task task) {
+    private HBox buildTaskRow(Task task, Map<String, String> projectNames) {
         HBox row = new HBox(8);
         row.getStyleClass().add("task-item");
         row.setAlignment(Pos.CENTER_LEFT);
 
-        // Done checkbox — CLI: cf task done <id>
+        // Done checkbox — CLI: cmf task done <id>
         CheckBox doneCheck = new CheckBox();
         doneCheck.setSelected(task.getStatus() == TaskStatus.DONE);
-        doneCheck.setTooltip(new Tooltip("CLI: cf task done " + task.getShortId()));
+        doneCheck.setTooltip(new Tooltip("CLI: cmf task done " + task.getShortId()));
         doneCheck.setOnAction(e -> {
             if (doneCheck.isSelected() && task.getStatus() != TaskStatus.DONE) {
                 taskService.complete(task.getId());
@@ -205,12 +208,12 @@ public class TasksScreen {
         }
         HBox.setHgrow(titleLabel, Priority.ALWAYS);
 
-        // Project name
+        // Project name (loaded from map — 0 queries)
         Label projectLabel = new Label();
         if (task.getProjectId() != null) {
-            try {
-                projectLabel.setText(projectService.getById(task.getProjectId()).getName());
-            } catch (Exception ignored) {
+            String pName = projectNames.get(task.getProjectId());
+            if (pName != null) {
+                projectLabel.setText(pName);
             }
         }
         projectLabel.getStyleClass().add("task-meta");
@@ -227,16 +230,16 @@ public class TasksScreen {
         statusLabel.getStyleClass().add("label-small");
         statusLabel.setMinWidth(80);
 
-        // Edit button — CLI: cf task edit <id>
+        // Edit button — CLI: cmf task edit <id>
         Button editBtn = new Button("✏");
         editBtn.getStyleClass().add("btn-ghost");
-        editBtn.setTooltip(new Tooltip("CLI: cf task edit " + task.getShortId()));
+        editBtn.setTooltip(new Tooltip("CLI: cmf task edit " + task.getShortId()));
         editBtn.setOnAction(e -> showEditTaskDialog(task));
 
-        // Delete button — CLI: cf task delete <id>
+        // Delete button — CLI: cmf task delete <id>
         Button deleteBtn = new Button("🗑");
         deleteBtn.getStyleClass().add("btn-ghost");
-        deleteBtn.setTooltip(new Tooltip("CLI: cf task delete " + task.getShortId()));
+        deleteBtn.setTooltip(new Tooltip("CLI: cmf task delete " + task.getShortId()));
         deleteBtn.setOnAction(e -> {
             Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
                     "Delete task: " + task.getTitle() + "?",
@@ -256,7 +259,7 @@ public class TasksScreen {
 
     /**
      * Add task dialog — GUI equivalent of:
-     *   cf task add <title> -p <project> -d <due> --priority <priority>
+     *   cmf task add <title> -p <project> -d <due> --priority <priority>
      *
      * Every flag has a matching form control.
      */
@@ -269,7 +272,7 @@ public class TasksScreen {
         List<String> projectNames = projectService.listAll().stream()
                 .map(p -> p.getName()).toList();
 
-        CommandFormBuilder form = new CommandFormBuilder("cf task add")
+        CommandFormBuilder form = new CommandFormBuilder("cmf task add")
                 .addTextParam("title", "Task Title", "e.g., Fix batch registration bug",
                         "<title> (positional, required)", true)
                 .addChoiceOption("project", "Project", projectNames, null,
@@ -342,7 +345,7 @@ public class TasksScreen {
 
     /**
      * Edit task dialog — GUI equivalent of:
-     *   cf task edit <id> [-t title] [--desc desc] [--priority priority]
+     *   cmf task edit <id> [-t title] [--desc desc] [--priority priority]
      *       [-d due] [-s status] [-p project]
      *
      * Every single flag has a matching GUI control.
@@ -356,7 +359,7 @@ public class TasksScreen {
                 .map(p -> p.getName()).toList();
         List<String> statuses = List.of("Open", "In Progress", "Done", "Archived");
 
-        CommandFormBuilder form = new CommandFormBuilder("cf task edit " + task.getShortId())
+        CommandFormBuilder form = new CommandFormBuilder("cmf task edit " + task.getShortId())
                 .addTextOption("title", "Title", task.getTitle(),
                         "-t", "-t \"new title\"")
                 .addTextOption("description", "Description",
@@ -368,6 +371,7 @@ public class TasksScreen {
                         "--priority", "--priority <low|medium|high|critical>")
                 .addDateOption("due", "Due Date", "-d",
                         "-d <today|tomorrow|yyyy-MM-dd>")
+                .addBooleanFlag("clearDue", "Clear Due Date", "--clear-due", "--clear-due")
                 .addChoiceOption("status", "Status", statuses,
                         task.getStatus().getDisplayName(),
                         "-s", "-s <open|in_progress|done|archived>")
@@ -379,6 +383,7 @@ public class TasksScreen {
             String desc = form.getFieldValueByName("description");
             String prioStr = form.getFieldValueByName("priority");
             String dueStr = form.getFieldValueByName("due");
+            boolean clearDue = "true".equals(form.getFieldValueByName("clearDue"));
             String statusStr = form.getFieldValueByName("status");
             String projStr = form.getFieldValueByName("project");
 
@@ -418,7 +423,7 @@ public class TasksScreen {
             }
 
             try {
-                taskService.update(task.getId(), titleVal, desc, priority, due, status, projectId);
+                taskService.update(task.getId(), titleVal, desc, priority, due, clearDue, status, projectId);
                 dialog.close();
                 onDataChanged.run();
             } catch (Exception ex) {

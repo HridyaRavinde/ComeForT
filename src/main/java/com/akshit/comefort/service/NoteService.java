@@ -3,6 +3,7 @@ package com.akshit.comefort.service;
 import com.akshit.comefort.core.Note;
 import com.akshit.comefort.core.enums.ActionType;
 import com.akshit.comefort.core.enums.EntityType;
+import com.akshit.comefort.exception.AmbiguousEntityException;
 import com.akshit.comefort.exception.EntityNotFoundException;
 import com.akshit.comefort.repository.NoteRepository;
 import com.akshit.comefort.util.IdGenerator;
@@ -68,9 +69,24 @@ public class NoteService {
         var byId = noteRepository.findById(idOrFragment);
         if (byId.isPresent()) return byId.get();
 
+        var byPrefix = noteRepository.findByIdPrefix(idOrFragment);
+        if (byPrefix.size() == 1) return byPrefix.getFirst();
+        if (byPrefix.size() > 1) {
+            List<String> candidates = byPrefix.stream()
+                    .map(n -> String.format("%s - %s", n.getId().substring(0, 8), n.getTitle()))
+                    .toList();
+            throw new AmbiguousEntityException("Note", idOrFragment, candidates);
+        }
+
         var byTitle = noteRepository.findByTitleFragment(idOrFragment);
         if (byTitle.isEmpty()) {
             throw new EntityNotFoundException("Note", idOrFragment);
+        }
+        if (byTitle.size() > 1) {
+            List<String> candidates = byTitle.stream()
+                    .map(n -> String.format("%s - %s", n.getId().substring(0, 8), n.getTitle()))
+                    .toList();
+            throw new AmbiguousEntityException("Note", idOrFragment, candidates);
         }
         return byTitle.getFirst();
     }

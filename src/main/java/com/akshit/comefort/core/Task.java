@@ -127,6 +127,8 @@ public class Task {
         this.updatedAt = LocalDateTime.now();
         if (status == TaskStatus.DONE) {
             this.completedAt = LocalDateTime.now();
+        } else {
+            this.completedAt = null;
         }
     }
 

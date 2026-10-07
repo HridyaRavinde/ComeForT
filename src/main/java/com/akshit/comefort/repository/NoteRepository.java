@@ -59,6 +59,17 @@ public class NoteRepository {
         }
     }
 
+    public List<Note> findByIdPrefix(String prefix) {
+        String sql = "SELECT * FROM notes WHERE id LIKE ? ORDER BY updated_at DESC";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setString(1, prefix + "%");
+            return collectResults(ps);
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to find note by prefix: " + e.getMessage(), e);
+        }
+    }
+
     public List<Note> findByTitleFragment(String fragment) {
         String sql = "SELECT * FROM notes WHERE LOWER(title) LIKE LOWER(?) ORDER BY updated_at DESC";
 
@@ -125,7 +136,7 @@ public class NoteRepository {
 
         try (PreparedStatement ps = getConnection().prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-            return rs.getInt(1);
+            return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {
             throw new DatabaseException("Failed to count notes: " + e.getMessage(), e);
         }

@@ -14,14 +14,18 @@ if %ERRORLEVEL% neq 0 (
     )
 )
 
-:: Locate and launch cf.bat with gui argument
+:: Locate and launch comefort.bat or cmf.bat with gui argument
 set "SCRIPT_DIR=%~dp0"
-if exist "%SCRIPT_DIR%bin\cf.bat" (
-    start "" "%SCRIPT_DIR%bin\cf.bat" gui
-) else if exist "%SCRIPT_DIR%cf.bat" (
-    start "" "%SCRIPT_DIR%cf.bat" gui
+if exist "%SCRIPT_DIR%bin\comefort.bat" (
+    start "" "%SCRIPT_DIR%bin\comefort.bat" gui
+) else if exist "%SCRIPT_DIR%bin\cmf.bat" (
+    start "" "%SCRIPT_DIR%bin\cmf.bat" gui
+) else if exist "%SCRIPT_DIR%comefort.bat" (
+    start "" "%SCRIPT_DIR%comefort.bat" gui
+) else if exist "%SCRIPT_DIR%cmf.bat" (
+    start "" "%SCRIPT_DIR%cmf.bat" gui
 ) else (
-    echo [ERROR] Could not locate cf.bat in %SCRIPT_DIR%bin\
+    echo [ERROR] Could not locate comefort.bat or cmf.bat in %SCRIPT_DIR%bin\
     pause
     exit /b 1
 )

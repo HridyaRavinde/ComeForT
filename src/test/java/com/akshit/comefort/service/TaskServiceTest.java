@@ -114,4 +114,44 @@ class TaskServiceTest {
         assertEquals(1, highOpen.size());
         assertEquals("Task 2", highOpen.get(0).getTitle());
     }
+
+    @Test
+    @DisplayName("Ambiguous fragment match throws AmbiguousEntityException")
+    void testAmbiguousResolve() {
+        taskService.create("Fix login bug", null, TaskPriority.MEDIUM, null);
+        taskService.create("Fix QR bug", null, TaskPriority.MEDIUM, null);
+
+        com.akshit.comefort.exception.AmbiguousEntityException ex =
+                assertThrows(com.akshit.comefort.exception.AmbiguousEntityException.class,
+                        () -> taskService.resolve("Fix"));
+
+        assertEquals(2, ex.getCandidates().size());
+    }
+
+    @Test
+    @DisplayName("Clear due date removes due date from task")
+    void testClearDueDate() {
+        Task task = taskService.create("Task with due date", null,
+                TaskPriority.MEDIUM, LocalDate.now().plusDays(5));
+        assertNotNull(task.getDueDate());
+
+        Task updated = taskService.update(task.getId(), null, null, null, null, true, null, null);
+        assertNull(updated.getDueDate());
+    }
+
+    @Test
+    @DisplayName("Status transition from DONE to IN_PROGRESS resets completedAt")
+    void testStatusResetCompletedAt() {
+        Task task = taskService.create("Completed task test", null, TaskPriority.MEDIUM, null);
+        taskService.complete(task.getId());
+
+        Task completed = taskService.getById(task.getId());
+        assertEquals(TaskStatus.DONE, completed.getStatus());
+        assertNotNull(completed.getCompletedAt());
+
+        taskService.update(task.getId(), null, null, null, null, false, TaskStatus.IN_PROGRESS, null);
+        Task reopened = taskService.getById(task.getId());
+        assertEquals(TaskStatus.IN_PROGRESS, reopened.getStatus());
+        assertNull(reopened.getCompletedAt());
+    }
 }

@@ -5,7 +5,7 @@ import picocli.CommandLine.Command;
 
 /**
  * CLI command to launch the ComeFort desktop GUI application.
- * Usage: cf gui
+ * Usage: cmf gui (or comefort gui)
  */
 @Command(
         name = "gui",

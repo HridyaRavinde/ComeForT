@@ -13,6 +13,7 @@ import picocli.CommandLine.Parameters;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Task management commands — add, list, done, edit, delete.
@@ -33,7 +34,7 @@ public class TaskCommand implements Runnable {
     @Override
     public void run() {
         // Show help when no subcommand is given
-        System.out.println("  Usage: cf task <add|list|done|edit|delete>");
+        System.out.println("  Usage: cmf task <add|list|done|edit|delete> (or comefort task ...)");
         System.out.println();
         System.out.println("  Subcommands:");
         System.out.println("    add      Create a new task");
@@ -75,7 +76,7 @@ public class TaskCommand implements Runnable {
         @Override
         public void run() {
             if (titleWords == null || titleWords.isEmpty()) {
-                formatter.error("Task title is required. Usage: cf task add \"Task title\"");
+                formatter.error("Task title is required. Usage: cmf task add \"Task title\"");
                 return;
             }
 
@@ -181,19 +182,16 @@ public class TaskCommand implements Runnable {
 
             if (tasks.isEmpty()) {
                 formatter.printSectionHeader("Tasks");
-                formatter.empty("No tasks found. Create one with: cf task add \"My task\"");
+                formatter.empty("No tasks found. Create one with: cmf task add \"My task\"");
                 formatter.newLine();
                 return;
             }
 
+            Map<String, String> projectNames = projectService.getProjectNameMap();
             String header = "Tasks" + (projectName != null ? " — " + projectName : "");
             formatter.printTaskSection(header, tasks, task -> {
                 if (task.getProjectId() == null) return null;
-                try {
-                    return projectService.getById(task.getProjectId()).getName();
-                } catch (Exception e) {
-                    return null;
-                }
+                return projectNames.get(task.getProjectId());
             });
             formatter.newLine();
         }
@@ -216,7 +214,7 @@ public class TaskCommand implements Runnable {
         @Override
         public void run() {
             if (identifierWords == null || identifierWords.isEmpty()) {
-                formatter.error("Specify a task ID or title fragment. Usage: cf task done \"Fix bug\"");
+                formatter.error("Specify a task ID or title fragment. Usage: cmf task done \"Fix bug\"");
                 return;
             }
 
@@ -247,6 +245,9 @@ public class TaskCommand implements Runnable {
 
         @Option(names = {"-d", "--due"}, description = "New due date")
         private String dueDate;
+
+        @Option(names = {"--clear-due"}, description = "Clear the due date")
+        private boolean clearDue;
 
         @Option(names = {"-s", "--status"}, description = "New status")
         private String status;
@@ -303,7 +304,7 @@ public class TaskCommand implements Runnable {
             }
 
             Task task = taskService.update(taskId, title, description,
-                    taskPriority, parsedDue, taskStatus, projectId);
+                    taskPriority, parsedDue, clearDue, taskStatus, projectId);
             formatter.success("Updated task: " + task.getTitle());
         }
     }
@@ -325,7 +326,7 @@ public class TaskCommand implements Runnable {
         @Override
         public void run() {
             if (identifierWords == null || identifierWords.isEmpty()) {
-                formatter.error("Specify a task ID or title. Usage: cf task delete \"task name\"");
+                formatter.error("Specify a task ID or title. Usage: cmf task delete \"task name\"");
                 return;
             }
 

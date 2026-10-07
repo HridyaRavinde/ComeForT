@@ -25,12 +25,10 @@ public final class SchemaInitializer {
     }
 
     /**
-     * Loads the schema SQL from the classpath and executes it against the connection.
-     * All statements use IF NOT EXISTS, making this idempotent.
+     * Initializes and migrates database schema using versioned migration runner.
      */
     public static void initialize(Connection connection) {
-        String schemaSql = loadSchemaFromClasspath();
-        executeSql(connection, schemaSql);
+        MigrationRunner.runMigrations(connection);
     }
 
     /**

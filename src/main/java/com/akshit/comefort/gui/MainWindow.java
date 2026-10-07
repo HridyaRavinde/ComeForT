@@ -1,5 +1,6 @@
 package com.akshit.comefort.gui;
 
+import com.akshit.comefort.AppContext;
 import com.akshit.comefort.db.DatabaseManager;
 import com.akshit.comefort.gui.screens.*;
 import com.akshit.comefort.repository.*;
@@ -78,25 +79,20 @@ public class MainWindow extends Application {
     }
 
     /**
-     * Wire the same service layer that the CLI uses.
+     * Wire services from the shared AppContext (same composition root as CLI).
      */
     private void initializeServices() {
-        dbManager = new DatabaseManager();
-        dbManager.initialize();
+        AppContext context = AppContext.getInstance();
+        context.ensureInitialized();
 
-        var projectRepo = new ProjectRepository(dbManager);
-        var taskRepo = new TaskRepository(dbManager);
-        var noteRepo = new NoteRepository(dbManager);
-        var captureRepo = new CaptureRepository(dbManager);
-        var activityRepo = new ActivityRepository(dbManager);
-
-        activityService = new ActivityService(activityRepo);
-        projectService = new ProjectService(projectRepo, activityService);
-        taskService = new TaskService(taskRepo, activityService);
-        noteService = new NoteService(noteRepo, activityService);
-        captureService = new CaptureService(captureRepo, activityService);
-        searchService = new SearchService(taskRepo, projectRepo, noteRepo, captureRepo);
-        todayService = new TodayService(taskService, captureService, activityService);
+        dbManager = context.getDbManager();
+        activityService = context.getActivityService();
+        projectService = context.getProjectService();
+        taskService = context.getTaskService();
+        noteService = context.getNoteService();
+        captureService = context.getCaptureService();
+        searchService = context.getSearchService();
+        todayService = context.getTodayService();
     }
 
     private void initializeScreens() {
@@ -106,7 +102,7 @@ public class MainWindow extends Application {
                 activityService, this::refreshCurrentScreen);
         tasksScreen = new TasksScreen(taskService, projectService, this::refreshCurrentScreen);
         notesScreen = new NotesScreen(noteService, projectService, this::refreshCurrentScreen);
-        inboxScreen = new InboxScreen(captureService, this::refreshCurrentScreen);
+        inboxScreen = new InboxScreen(captureService, projectService, this::refreshCurrentScreen);
         searchScreen = new SearchScreen(searchService, projectService);
         statusScreen = new StatusScreen(projectService, taskService, noteService,
                 captureService, activityService);
@@ -146,18 +142,18 @@ public class MainWindow extends Application {
         sidebarBox.getChildren().add(brand);
 
         // Main navigation
-        addNavItem(sidebarBox, "today", "🔥", "Today", "cf today");
-        addNavItem(sidebarBox, "inbox", "📥", "Inbox", "cf inbox");
+        addNavItem(sidebarBox, "today", "🔥", "Today", "cmf today");
+        addNavItem(sidebarBox, "inbox", "📥", "Inbox", "cmf inbox");
 
         // Section: Manage
         addSectionLabel(sidebarBox, "MANAGE");
-        addNavItem(sidebarBox, "projects", "🚀", "Projects", "cf project list");
-        addNavItem(sidebarBox, "tasks", "☐", "Tasks", "cf task list");
-        addNavItem(sidebarBox, "notes", "📝", "Notes", "cf note list");
+        addNavItem(sidebarBox, "projects", "🚀", "Projects", "cmf project list");
+        addNavItem(sidebarBox, "tasks", "☐", "Tasks", "cmf task list");
+        addNavItem(sidebarBox, "notes", "📝", "Notes", "cmf note list");
 
         // Section: Tools
         addSectionLabel(sidebarBox, "TOOLS");
-        addNavItem(sidebarBox, "search", "🔎", "Search", "cf search <query>");
+        addNavItem(sidebarBox, "search", "🔎", "Search", "cmf search <query>");
 
         // Spacer
         Region spacer = new Region();
@@ -166,7 +162,7 @@ public class MainWindow extends Application {
 
         // Bottom section
         sidebarBox.getChildren().add(new Separator());
-        addNavItem(sidebarBox, "status", "📊", "Status", "cf status");
+        addNavItem(sidebarBox, "status", "📊", "Status", "cmf status");
 
         // Theme toggle
         Label themeToggle = new Label("🌙 Dark Mode");

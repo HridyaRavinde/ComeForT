@@ -12,7 +12,7 @@ import javafx.scene.layout.*;
 
 /**
  * Search screen — GUI equivalent of:
- *   cf search <query>
+ *   cmf search <query>
  *
  * Searches across tasks, projects, notes, and captures with categorized results.
  */
@@ -35,10 +35,10 @@ public class SearchScreen {
         title.getStyleClass().add("page-title");
         root.getChildren().add(title);
 
-        // Search bar — CLI: cf search <query>
+        // Search bar — CLI: cmf search <query>
         TextField searchField = new TextField();
         searchField.getStyleClass().add("quick-capture");
-        searchField.setPromptText("Search across everything... (CLI: cf search <query>)");
+        searchField.setPromptText("Search across everything... (CLI: cmf search <query>)");
 
         // Results container
         VBox resultsContainer = new VBox(12);
@@ -68,7 +68,7 @@ public class SearchScreen {
         root.getChildren().add(searchBar);
 
         // CLI hint
-        Label cliHint = new Label("CLI: cf search <query>  — searches across tasks, projects, notes, and captures");
+        Label cliHint = new Label("CLI: cmf search <query>  — searches across tasks, projects, notes, and captures");
         cliHint.getStyleClass().add("page-subtitle");
         root.getChildren().add(cliHint);
 
@@ -97,7 +97,7 @@ public class SearchScreen {
         container.getChildren().add(resultCount);
 
         // CLI preview
-        Label cliPreview = new Label("cf search " + (query.contains(" ")
+        Label cliPreview = new Label("cmf search " + (query.contains(" ")
                 ? "\"" + query + "\"" : query));
         cliPreview.getStyleClass().add("command-preview");
         container.getChildren().add(cliPreview);

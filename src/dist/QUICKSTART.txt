@@ -14,7 +14,7 @@ Option 1: Just Run (No Installation Required)
 
 - To use the Terminal CLI:
     Double-click 'ComeFort-CLI.bat'
-    (Opens a terminal pre-configured with the 'cf' command)
+    (Opens a terminal pre-configured with 'cmf' and 'comefort' commands)
 
 ----------------------------------------------------------------------
 Option 2: Install System-Wide (Recommended)
@@ -26,25 +26,25 @@ Option 2: Install System-Wide (Recommended)
 3. You can now:
    - Double-click the Desktop shortcut anytime to open the GUI.
    - Open ANY Command Prompt or PowerShell and type:
-       cf --help
-       cf c "your quick thought"
-       cf today
-       cf gui
+       cmf --help          (or comefort --help)
+       cmf c "your quick thought"
+       cmf today
+       cmf gui
 
 ----------------------------------------------------------------------
-Commands Cheat Sheet:
+Commands Cheat Sheet (both 'cmf' and 'comefort' work identically):
 ----------------------------------------------------------------------
-  cf c "thought"              Quick capture to inbox
-  cf inbox                    Review inbox items
-  cf project add <name>       Create a project
-  cf project list             List projects
-  cf task add "<title>"       Add a task (-p project, -d today, --priority high)
-  cf task list                List tasks (filter by project, status, priority)
-  cf task done "<title|id>"   Mark task as done
-  cf note add "<title>"       Create note (-c content, -p project)
-  cf search "<query>"         Search across tasks, projects, notes & inbox
-  cf today                    Daily dashboard overview
-  cf status                   System status & recent activity log
-  cf gui                      Launch the desktop GUI
+  cmf c "thought"              Quick capture to inbox
+  cmf inbox                    Review inbox items
+  cmf project add <name>       Create a project
+  cmf project list             List projects
+  cmf task add "<title>"       Add a task (-p project, -d today, --priority high)
+  cmf task list                List tasks (filter by project, status, priority)
+  cmf task done "<title|id>"   Mark task as done
+  cmf note add "<title>"       Create note (-c content, -p project)
+  cmf search "<query>"         Search across tasks, projects, notes & inbox
+  cmf today                    Daily dashboard overview
+  cmf status                   System status & recent activity log
+  cmf gui                      Launch the desktop GUI
 
 ======================================================================

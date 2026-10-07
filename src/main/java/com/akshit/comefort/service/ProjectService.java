@@ -1,14 +1,17 @@
 package com.akshit.comefort.service;
 
 import com.akshit.comefort.core.Project;
+import com.akshit.comefort.core.ProjectSummary;
 import com.akshit.comefort.core.enums.ActionType;
 import com.akshit.comefort.core.enums.EntityType;
+import com.akshit.comefort.exception.AmbiguousEntityException;
 import com.akshit.comefort.exception.DuplicateEntityException;
 import com.akshit.comefort.exception.EntityNotFoundException;
 import com.akshit.comefort.repository.ProjectRepository;
 import com.akshit.comefort.util.IdGenerator;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Business logic for managing projects.
@@ -55,6 +58,21 @@ public class ProjectService {
     }
 
     /**
+     * Returns project summaries with pre-aggregated task and note counts.
+     * Prevents N+1 queries.
+     */
+    public List<ProjectSummary> getProjectSummaries() {
+        return projectRepository.findProjectSummaries();
+    }
+
+    /**
+     * Returns a map of project ID to project name in a single database query.
+     */
+    public Map<String, String> getProjectNameMap() {
+        return projectRepository.getProjectNameMap();
+    }
+
+    /**
      * Finds a project by exact name (case-insensitive).
      */
     public Project getByName(String name) {
@@ -89,8 +107,11 @@ public class ProjectService {
             return matches.getFirst();
         }
 
-        // Multiple matches — return first but could prompt user in future
-        return matches.getFirst();
+        // Multiple matches
+        List<String> candidates = matches.stream()
+                .map(p -> String.format("%s (%s)", p.getName(), p.getId().substring(0, 8)))
+                .toList();
+        throw new AmbiguousEntityException("Project", nameOrFragment, candidates);
     }
 
     /**

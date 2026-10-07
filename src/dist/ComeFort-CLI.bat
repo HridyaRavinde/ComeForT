@@ -11,21 +11,26 @@ echo ======================================================================
 echo                 ComeFort - Developer Life OS (CLI)
 echo ======================================================================
 echo.
-echo   [OK] Environment configured! 'cf' command is available in this shell.
+echo   [OK] Environment configured! Both 'cmf' and 'comefort' are available.
+echo        (They are identical twin commands, use whichever you prefer!)
 echo.
 echo   Quick Examples:
-echo     cf c "your thought here"          -- Quick capture to inbox
-echo     cf project add MyProject          -- Create a project
-echo     cf task add "Task" -p MyProject   -- Add a task
-echo     cf today                          -- Daily overview
-echo     cf gui                            -- Open the desktop GUI
-echo     cf --help                         -- View all commands
+echo     cmf c "your thought here"          -- Quick capture to inbox
+echo     cmf project add MyProject          -- Create a project
+echo     cmf task add "Task" -p MyProject   -- Add a task
+echo     cmf today                          -- Daily overview
+echo     cmf gui                            -- Open the desktop GUI
+echo     cmf --help (or comefort --help)    -- View all commands
 echo.
 echo ======================================================================
 echo.
 
 :: Initialize or show current status
-call "%SCRIPT_DIR%bin\cf.bat" status
+if exist "%SCRIPT_DIR%bin\cmf.bat" (
+    call "%SCRIPT_DIR%bin\cmf.bat" status
+) else (
+    call "%SCRIPT_DIR%bin\comefort.bat" status
+)
 
 echo.
-cmd /k "echo Tip: Run 'cf --help' anytime to explore commands. & echo."
+cmd /k "echo Tip: Run 'cmf --help' or 'comefort --help' anytime to explore commands. & echo."

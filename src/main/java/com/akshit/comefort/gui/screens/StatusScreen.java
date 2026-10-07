@@ -11,7 +11,7 @@ import javafx.scene.layout.*;
 import java.util.List;
 
 /**
- * Status screen — GUI equivalent of `cf status`.
+ * Status screen — GUI equivalent of `cmf status` (or `comefort status`).
  * Shows global statistics, counts, and recent activity.
  */
 public class StatusScreen {
@@ -39,7 +39,7 @@ public class StatusScreen {
         // Header
         Label title = new Label("📊 Status");
         title.getStyleClass().add("page-title");
-        Label cliHint = new Label("CLI: cf status");
+        Label cliHint = new Label("CLI: cmf status (or comefort status)");
         cliHint.getStyleClass().add("page-subtitle");
         root.getChildren().addAll(title, cliHint);
 
@@ -93,7 +93,7 @@ public class StatusScreen {
         }
 
         // CLI preview
-        Label cliPreview = new Label("cf status");
+        Label cliPreview = new Label("cmf status");
         cliPreview.getStyleClass().add("command-preview");
         root.getChildren().addAll(new Separator(), cliPreview);
 

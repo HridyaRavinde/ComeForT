@@ -94,7 +94,7 @@ public class DatabaseManager {
     public Connection getConnection() {
         if (connection == null) {
             throw new DatabaseException(
-                    "Database not initialized. Run 'cf init' first.");
+                    "Database not initialized. Run 'cmf init' or 'comefort init' first.");
         }
         try {
             if (connection.isClosed()) {
