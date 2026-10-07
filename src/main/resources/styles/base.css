@@ -369,23 +369,17 @@
     -fx-background-color: #121212;
 }
 
-.terminal-input-bar {
-    -fx-border-width: 1 0 0 0;
-    -fx-border-color: #252525;
-    -fx-background-color: #181818;
+.terminal-cursor {
+    -fx-font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-fill: #2ecc71;
 }
 
-.terminal-input {
-    -fx-background-color: #121212;
-    -fx-text-fill: #e0e0e0;
-    -fx-border-color: #2a2a2a;
-    -fx-border-radius: 4;
-    -fx-background-radius: 4;
-    -fx-padding: 4 8 4 8;
-}
-
-.terminal-input:focused {
-    -fx-border-color: #528bff;
+.terminal-input-text {
+    -fx-font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
+    -fx-font-size: 13px;
+    -fx-fill: #f8f8f2;
 }
 
 .terminal-btn {
@@ -415,20 +409,6 @@
 .terminal-btn-close:hover {
     -fx-background-color: #e74c3c;
     -fx-text-fill: #ffffff;
-}
-
-.terminal-btn-run {
-    -fx-background-color: #2ecc71;
-    -fx-text-fill: #141414;
-    -fx-font-weight: bold;
-    -fx-font-size: 11px;
-    -fx-padding: 4 10 4 10;
-    -fx-background-radius: 4;
-    -fx-cursor: hand;
-}
-
-.terminal-btn-run:hover {
-    -fx-background-color: #27ae60;
 }
 
 .terminal-shell-select {

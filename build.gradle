@@ -41,6 +41,9 @@ dependencies {
     implementation 'org.kordamp.ikonli:ikonli-javafx:12.3.1'
     implementation 'org.kordamp.ikonli:ikonli-materialdesign2-pack:12.3.1'
 
+    // Pseudo-terminal (PTY / ConPTY) for real interactive terminal emulation
+    implementation 'org.jetbrains.pty4j:pty4j:0.13.13'
+
     // Testing
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

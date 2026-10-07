@@ -144,25 +144,39 @@ Execute the comprehensive JUnit 5 integration test suite:
 ./gradlew run --args="--help"
 ./gradlew run --args="today"
 # Or using the dev runner:
-.\dev today
-.\dev gui
+.\dev live              # Real-Time Dev Mode (auto-recompiles & relaunches on save)
+.\dev gui               # Launch Desktop GUI once
+.\dev today             # Run CLI command
 ```
 
 ---
 
 ## ⚡ Real-Time Development Mode (Like `npm run dev`)
 
-ComeFort provides built-in mechanisms to see changes in real time without restarting:
+ComeFort provides built-in mechanisms to see changes in real time:
 
-1. **🎨 Instant CSS Live-Reload (Hot Styling)**:
+1. **🚀 1-Command Live Runner (`dev live`)**:
+   - Run in terminal:
+     ```bash
+     .\dev live
+     # Or: .\dev.ps1 live
+     ```
+   - Launches the GUI app and monitors `src/`.
+   - When you edit any `.java` file and press **Ctrl+S**, it auto-recompiles and restarts the GUI automatically!
+
+2. **🎨 Instant CSS Live-Reload (Hot Styling — 0s delay)**:
    - While the GUI is running, any edits saved in `src/main/resources/styles/*.css` are instantly reloaded on the screen within ~100ms via JavaFX's filesystem `WatchService`.
-   - No app restart required.
+   - No app restart required at all!
 
-2. **🔄 In-App Screen & Data Hot-Reload (`F5` / `Ctrl + R`)**:
+3. **🔄 In-App Screen & Data Hot-Reload (`F5` / `Ctrl + R`)**:
    - Press **`F5`** or **`Ctrl + R`** anywhere inside the GUI.
    - It re-evaluates all stylesheets and re-queries SQLite, instantly re-rendering the active screen with the latest data and UI layouts.
 
-3. **🔁 Continuous Background Compilation (`dev watch`)**:
+4. **⚡ VS Code 1-Click JVM HotSwap (`F5`)**:
+   - Press **`F5`** in VS Code (using the bundled `.vscode/launch.json`).
+   - When you change method bodies and press **Ctrl+S**, VS Code hot-swaps the code into the running JVM without restarting!
+
+5. **🔁 Continuous Background Compilation (`dev watch`)**:
    - In a terminal, run:
      ```bash
      .\dev watch
@@ -170,7 +184,7 @@ ComeFort provides built-in mechanisms to see changes in real time without restar
      ```
    - Gradle continuously watches all `.java` files and auto-recompiles incremental changes on save (`Ctrl + S`).
 
-4. **⌨️ Integrated Terminal Live-Sync**:
+6. **⌨️ Integrated Terminal Live-Sync**:
    - Open the integrated terminal (`Ctrl + ` ` or `Ctrl + T`).
    - Run any command (`cmf task add ...`, `cmf inbox done ...`).
    - The GUI automatically detects CLI mutations and refreshes the desktop screen within ~450ms.

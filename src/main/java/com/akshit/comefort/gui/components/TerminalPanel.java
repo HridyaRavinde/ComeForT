@@ -1,9 +1,13 @@
 package com.akshit.comefort.gui.components;
 
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
@@ -12,6 +16,8 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import javafx.util.Callback;
+import javafx.util.Duration;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -21,33 +27,44 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Integrated Terminal Panel — Real OS process terminal connected to
- * the system shell (PowerShell / CMD on Windows, Bash / Zsh on Unix).
+ * Integrated Terminal Panel — Real OS terminal connected to the host machine's
+ * genuinely installed shells (PowerShell 7, Windows PowerShell, CMD, Git Bash, WSL, etc.).
  *
- * <p>Features:
- *   - Live bidirectional process I/O with standard stream piping
- *   - Real-time ANSI color rendering into styled TextFlow
- *   - Shell switcher (PowerShell / Command Prompt / Git Bash)
- *   - Command history navigation with Up/Down arrows
- *   - Quick ComeFort commands shortcut menu
- *   - Auto-sync: triggers GUI screen refresh when ComeFort CLI commands finish
- *   - Pre-configured PATH containing ComeFort binaries (cmf and comefort)
+ * <p>Key Features:
+ *   - Real Shell Discovery: Zero hardcoding. Detects installed shells directly from the host system.
+ *   - Native Terminal Emulation: Real ANSI color parser, screen clear (cls/clear) support.
+ *   - Authentic Inline Typing: Blinking cursor attached directly to the active prompt.
+ *   - Shell Switcher: Dynamically lists all verified executables present on this device.
+ *   - Full Keyboard Controls: Enter, Backspace, Delete, Arrows, History, Tab autocomplete, Ctrl+C, Ctrl+L, Ctrl+V.
+ *   - PATH Injection: Guarantees 'cmf' and 'comefort' binaries are in process PATH.
+ *   - Real-time GUI Sync: Triggers desktop data reload after ComeFort CLI mutations.
  * </p>
  */
 public class TerminalPanel {
 
     private static final String FONT_FAMILY = "Cascadia Code, Consolas, 'Courier New', monospace";
     private static final int FONT_SIZE = 13;
-    private static final int MAX_CONSOLE_NODES = 4000;
+    private static final int MAX_CONSOLE_NODES = 5000;
 
     // UI layout
     private final VBox rootNode;
     private final ScrollPane scrollPane;
     private final TextFlow consoleFlow;
-    private TextField inputField;
     private Label statusIndicator;
-    private ComboBox<String> shellSelector;
+    private ComboBox<ShellDetector.ShellProfile> shellSelector;
     private Button maxRestoreBtn;
+
+    // Shell configuration
+    private final List<ShellDetector.ShellProfile> installedShells;
+    private ShellDetector.ShellProfile activeShell;
+
+    // Inline prompt & typing state
+    private final StringBuilder currentInput = new StringBuilder();
+    private int cursorIndex = 0;
+    private final Text inputBeforeCursor = new Text("");
+    private final Text cursorNode = new Text("█");
+    private final Text inputAfterCursor = new Text("");
+    private Timeline cursorTimeline;
 
     // State & process management
     private final Runnable onDataChanged;
@@ -61,14 +78,29 @@ public class TerminalPanel {
     private final List<String> commandHistory = new ArrayList<>();
     private int historyIndex = 0;
     private boolean isMaximized = false;
-    private double currentHeight = 260.0;
+    private double currentHeight = 270.0;
 
-    // ANSI pattern: \u001B\[([0-9;]*)m
-    private static final Pattern ANSI_PATTERN = Pattern.compile("\u001B\\[([0-9;]*)m");
+    // Autocomplete dictionary
+    private static final List<String> CMF_AUTOCOMPLETE = List.of(
+            "cmf today", "cmf inbox", "cmf inbox done ", "cmf inbox convert ",
+            "cmf task list", "cmf task add ", "cmf task done ", "cmf task edit ",
+            "cmf project list", "cmf project add ", "cmf project show ",
+            "cmf note list", "cmf note add ", "cmf note show ",
+            "cmf status", "cmf search ", "cmf gui", "cmf --help",
+            "comefort today", "comefort task list", "comefort inbox",
+            "git status", "git log", "git diff", "dir", "cls", "clear", "exit"
+    );
+
+    // ANSI pattern: \u001B\[([0-9;]*)m or control codes
+    private static final Pattern ANSI_PATTERN = Pattern.compile("\u001B\\[([0-9;]*)([a-zA-Z])");
 
     public TerminalPanel(Runnable onDataChanged, Runnable onCloseRequest) {
         this.onDataChanged = onDataChanged;
         this.onCloseRequest = onCloseRequest;
+
+        // Dynamically discover all real shells installed on this device
+        this.installedShells = ShellDetector.detectInstalledShells();
+        this.activeShell = ShellDetector.getDefaultShell(installedShells);
 
         this.rootNode = new VBox();
         this.rootNode.getStyleClass().add("terminal-panel");
@@ -82,29 +114,49 @@ public class TerminalPanel {
         consoleFlow = new TextFlow();
         consoleFlow.getStyleClass().add("terminal-flow");
         consoleFlow.setLineSpacing(2);
-        consoleFlow.setPadding(new Insets(8, 12, 8, 12));
+        consoleFlow.setPadding(new Insets(10, 14, 10, 14));
+
+        Font font = Font.font(FONT_FAMILY, FontWeight.NORMAL, FONT_SIZE);
+        inputBeforeCursor.setFont(font);
+        inputBeforeCursor.setFill(Color.web("#f8f8f2"));
+        inputBeforeCursor.getStyleClass().add("terminal-input-text");
+
+        cursorNode.setFont(Font.font(FONT_FAMILY, FontWeight.BOLD, FONT_SIZE));
+        cursorNode.setFill(Color.web("#2ecc71"));
+        cursorNode.getStyleClass().add("terminal-cursor");
+
+        inputAfterCursor.setFont(font);
+        inputAfterCursor.setFill(Color.web("#f8f8f2"));
+        inputAfterCursor.getStyleClass().add("terminal-input-text");
 
         scrollPane = new ScrollPane(consoleFlow);
         scrollPane.getStyleClass().add("terminal-scroll");
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(false);
+        scrollPane.setFocusTraversable(true);
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
-        // Click on console focuses the input
-        scrollPane.setOnMouseClicked(e -> inputField.requestFocus());
+        // Direct keyboard listeners on scrollPane
+        scrollPane.addEventFilter(KeyEvent.KEY_PRESSED, this::handleKeyPressed);
+        scrollPane.addEventFilter(KeyEvent.KEY_TYPED, this::handleKeyTyped);
 
-        // 3. Interactive prompt input bar
-        HBox inputBar = buildInputBar();
+        // Focus handling
+        rootNode.setOnMouseClicked(e -> focusInput());
+        scrollPane.setOnMouseClicked(e -> focusInput());
+        consoleFlow.setOnMouseClicked(e -> focusInput());
 
-        rootNode.getChildren().addAll(header, scrollPane, inputBar);
+        setupCursorBlinking();
 
-        // Start default shell
-        String defaultShell = detectDefaultShell();
-        startShell(defaultShell);
+        rootNode.getChildren().addAll(header, scrollPane);
+
+        // Start active shell
+        if (activeShell != null) {
+            startShell(activeShell);
+        }
     }
 
     /**
-     * Builds the top control bar with title, shell picker, quick actions, clear, maximize, and close.
+     * Builds the top control bar with dynamically discovered shell profiles.
      */
     private HBox buildHeader() {
         HBox header = new HBox(10);
@@ -122,17 +174,42 @@ public class TerminalPanel {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // Available shells
+        // Dynamic Shell Profiles Dropdown (Real shells only)
         shellSelector = new ComboBox<>();
         shellSelector.getStyleClass().add("terminal-shell-select");
-        List<String> availableShells = getAvailableShells();
-        shellSelector.getItems().addAll(availableShells);
-        if (!availableShells.isEmpty()) {
-            shellSelector.setValue(availableShells.get(0));
-        }
+        shellSelector.getItems().addAll(installedShells);
+        shellSelector.setValue(activeShell);
+
+        // Custom Cell Factory for clean shell icons and descriptions
+        Callback<ListView<ShellDetector.ShellProfile>, ListCell<ShellDetector.ShellProfile>> cellFactory = lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(ShellDetector.ShellProfile item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    setText(item.icon() + "  " + item.displayName());
+                    setTooltip(new Tooltip(item.subtitle() + "\n" + item.executablePath()));
+                }
+            }
+        };
+        shellSelector.setCellFactory(cellFactory);
+        shellSelector.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(ShellDetector.ShellProfile item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.icon() + "  " + item.displayName());
+                }
+            }
+        });
+
         shellSelector.setOnAction(e -> {
-            String selected = shellSelector.getValue();
-            if (selected != null) {
+            ShellDetector.ShellProfile selected = shellSelector.getValue();
+            if (selected != null && !selected.equals(activeShell)) {
                 restartShell(selected);
             }
         });
@@ -148,17 +225,17 @@ public class TerminalPanel {
         addQuickMenuItem(quickCmds, "cmf status", "cmf status");
         addQuickMenuItem(quickCmds, "cmf --help", "cmf --help");
 
-        // Clear button
+        // Clear button (Ctrl+L)
         Button clearBtn = new Button("🗑 Clear");
         clearBtn.getStyleClass().add("terminal-btn");
-        clearBtn.setTooltip(new Tooltip("Clear terminal screen (Ctrl+L)"));
+        clearBtn.setTooltip(new Tooltip("Clear terminal screen (Ctrl+L or type cls/clear)"));
         clearBtn.setOnAction(e -> clearConsole());
 
         // Restart button
-        Button restartBtn = new Button("↻ Restart");
+        Button restartBtn = new Button("↺ Restart");
         restartBtn.getStyleClass().add("terminal-btn");
         restartBtn.setTooltip(new Tooltip("Restart active shell session"));
-        restartBtn.setOnAction(e -> restartShell(shellSelector.getValue()));
+        restartBtn.setOnAction(e -> restartShell(activeShell));
 
         // Maximize / Restore button
         maxRestoreBtn = new Button("⤢");
@@ -166,7 +243,7 @@ public class TerminalPanel {
         maxRestoreBtn.setTooltip(new Tooltip("Toggle Maximize / Restore"));
         maxRestoreBtn.setOnAction(e -> toggleMaximize());
 
-        // Close button
+        // Close button (Ctrl+` or Ctrl+T)
         Button closeBtn = new Button("✕");
         closeBtn.getStyleClass().add("terminal-btn-close");
         closeBtn.setTooltip(new Tooltip("Hide Terminal (Ctrl+`)"));
@@ -186,119 +263,290 @@ public class TerminalPanel {
     private void addQuickMenuItem(MenuButton menu, String label, String command) {
         MenuItem item = new MenuItem(label);
         item.setOnAction(e -> {
-            inputField.setText(command);
-            inputField.requestFocus();
-            inputField.positionCaret(command.length());
+            setInputText(command);
+            focusInput();
         });
         menu.getItems().add(item);
     }
 
-    /**
-     * Builds the bottom input prompt bar.
-     */
-    private HBox buildInputBar() {
-        HBox inputBar = new HBox(8);
-        inputBar.setAlignment(Pos.CENTER_LEFT);
-        inputBar.getStyleClass().add("terminal-input-bar");
-        inputBar.setPadding(new Insets(6, 12, 6, 12));
+    private void setupCursorBlinking() {
+        cursorTimeline = new Timeline(new KeyFrame(Duration.millis(500), e -> {
+            if (scrollPane.isFocused()) {
+                cursorNode.setVisible(!cursorNode.isVisible());
+            } else {
+                cursorNode.setVisible(true);
+            }
+        }));
+        cursorTimeline.setCycleCount(Animation.INDEFINITE);
+        cursorTimeline.play();
 
-        Label promptSymbol = new Label("❯");
-        promptSymbol.setStyle("-fx-text-fill: #2ecc71; -fx-font-weight: bold; -fx-font-family: monospace; -fx-font-size: 14px;");
-
-        inputField = new TextField();
-        inputField.getStyleClass().add("terminal-input");
-        inputField.setPromptText("Type command (e.g. cmf today, dir, git status)...");
-        inputField.setStyle("-fx-font-family: " + FONT_FAMILY + "; -fx-font-size: " + FONT_SIZE + "px;");
-        HBox.setHgrow(inputField, Priority.ALWAYS);
-
-        // Handle Enter key and Up/Down history
-        inputField.addEventFilter(KeyEvent.KEY_PRESSED, this::handleInputKeyEvent);
-
-        Button runBtn = new Button("Run ⏎");
-        runBtn.getStyleClass().add("terminal-btn-run");
-        runBtn.setOnAction(e -> executeCurrentInput());
-
-        inputBar.getChildren().addAll(promptSymbol, inputField, runBtn);
-        return inputBar;
+        scrollPane.focusedProperty().addListener((obs, oldV, focused) -> {
+            if (focused) {
+                cursorNode.setFill(Color.web("#2ecc71"));
+                cursorNode.setVisible(true);
+                cursorTimeline.play();
+            } else {
+                cursorNode.setFill(Color.web("#777777"));
+                cursorNode.setVisible(true);
+                cursorTimeline.stop();
+            }
+        });
     }
 
-    /**
-     * Handles keyboard shortcuts inside the input field:
-     * Enter = execute, Up/Down = navigate history, Ctrl+L = clear, Ctrl+C = interrupt.
-     */
-    private void handleInputKeyEvent(KeyEvent event) {
-        if (event.getCode() == KeyCode.ENTER) {
+    private void handleKeyTyped(KeyEvent event) {
+        String c = event.getCharacter();
+        if (c == null || c.isEmpty()) return;
+
+        char ch = c.charAt(0);
+        if (ch >= 32 && ch != 127) {
             event.consume();
-            executeCurrentInput();
-        } else if (event.getCode() == KeyCode.UP) {
+            if (cursorIndex <= currentInput.length()) {
+                currentInput.insert(cursorIndex, ch);
+                cursorIndex++;
+                renderInputState();
+                scrollToBottom();
+            }
+        }
+    }
+
+    private void handleKeyPressed(KeyEvent event) {
+        KeyCode code = event.getCode();
+
+        // 1. Enter: execute command
+        if (code == KeyCode.ENTER) {
+            event.consume();
+            if (!running) {
+                appendSystemMessage("\n[Restarting shell session...]\n");
+                restartShell(activeShell);
+                return;
+            }
+
+            String cmd = currentInput.toString();
+            String trimmed = cmd.trim();
+            currentInput.setLength(0);
+            cursorIndex = 0;
+            detachInputNodes();
+
+            if (!trimmed.isEmpty()) {
+                commandHistory.add(cmd);
+                historyIndex = commandHistory.size();
+            }
+
+            // Real Terminal Emulator: Native 'cls' and 'clear' support
+            if (trimmed.equalsIgnoreCase("cls") || trimmed.equalsIgnoreCase("clear")) {
+                clearConsole();
+                writeToProcess("\r\n");
+                attachInputNodes();
+                scrollToBottom();
+                return;
+            }
+
+            // Record the typed command in the console history
+            Text echo = new Text(cmd + "\n");
+            echo.setFont(Font.font(FONT_FAMILY, FontWeight.NORMAL, FONT_SIZE));
+            echo.setFill(Color.web("#ffffff"));
+            consoleFlow.getChildren().add(echo);
+
+            // Send command to child process
+            writeToProcess(cmd + "\r\n");
+
+            // Attach cursor right back at bottom
+            attachInputNodes();
+            scrollToBottom();
+
+            // Trigger GUI screen sync if it's a ComeFort command
+            if (trimmed.startsWith("cmf") || trimmed.startsWith("comefort")) {
+                scheduleDataSync();
+            }
+            return;
+        }
+
+        // 2. Backspace
+        if (code == KeyCode.BACK_SPACE) {
+            event.consume();
+            if (cursorIndex > 0) {
+                currentInput.deleteCharAt(cursorIndex - 1);
+                cursorIndex--;
+                renderInputState();
+                scrollToBottom();
+            }
+            return;
+        }
+
+        // 3. Delete
+        if (code == KeyCode.DELETE) {
+            event.consume();
+            if (cursorIndex < currentInput.length()) {
+                currentInput.deleteCharAt(cursorIndex);
+                renderInputState();
+                scrollToBottom();
+            }
+            return;
+        }
+
+        // 4. Left Arrow
+        if (code == KeyCode.LEFT) {
+            event.consume();
+            if (cursorIndex > 0) {
+                cursorIndex--;
+                renderInputState();
+                scrollToBottom();
+            }
+            return;
+        }
+
+        // 5. Right Arrow
+        if (code == KeyCode.RIGHT) {
+            event.consume();
+            if (cursorIndex < currentInput.length()) {
+                cursorIndex++;
+                renderInputState();
+                scrollToBottom();
+            }
+            return;
+        }
+
+        // 6. Home
+        if (code == KeyCode.HOME) {
+            event.consume();
+            cursorIndex = 0;
+            renderInputState();
+            scrollToBottom();
+            return;
+        }
+
+        // 7. End
+        if (code == KeyCode.END) {
+            event.consume();
+            cursorIndex = currentInput.length();
+            renderInputState();
+            scrollToBottom();
+            return;
+        }
+
+        // 8. Up Arrow: previous command in history
+        if (code == KeyCode.UP) {
             event.consume();
             if (!commandHistory.isEmpty()) {
                 if (historyIndex > 0) {
                     historyIndex--;
                 }
                 if (historyIndex < commandHistory.size()) {
-                    inputField.setText(commandHistory.get(historyIndex));
-                    inputField.positionCaret(inputField.getText().length());
+                    setInputText(commandHistory.get(historyIndex));
                 }
             }
-        } else if (event.getCode() == KeyCode.DOWN) {
+            return;
+        }
+
+        // 9. Down Arrow: next command in history
+        if (code == KeyCode.DOWN) {
             event.consume();
             if (!commandHistory.isEmpty()) {
                 if (historyIndex < commandHistory.size() - 1) {
                     historyIndex++;
-                    inputField.setText(commandHistory.get(historyIndex));
-                    inputField.positionCaret(inputField.getText().length());
+                    setInputText(commandHistory.get(historyIndex));
                 } else {
                     historyIndex = commandHistory.size();
-                    inputField.clear();
+                    setInputText("");
                 }
             }
-        } else if (event.isControlDown() && event.getCode() == KeyCode.L) {
-            event.consume();
-            clearConsole();
-        } else if (event.isControlDown() && event.getCode() == KeyCode.C) {
-            event.consume();
-            sendInterrupt();
-        }
-    }
-
-    /**
-     * Sends the current input text to the underlying shell process.
-     */
-    public void executeCurrentInput() {
-        String command = inputField.getText();
-        inputField.clear();
-
-        if (command == null || command.trim().isEmpty()) {
-            writeToProcess("\r\n");
             return;
         }
 
-        commandHistory.add(command);
-        historyIndex = commandHistory.size();
+        // 10. Tab: auto-complete
+        if (code == KeyCode.TAB) {
+            event.consume();
+            handleTabCompletion();
+            return;
+        }
 
-        // Echo command to console if shell doesn't echo it
-        writeToProcess(command + "\r\n");
+        // 11. Ctrl+C: Send interrupt
+        if (event.isControlDown() && code == KeyCode.C) {
+            event.consume();
+            sendInterrupt();
+            currentInput.setLength(0);
+            cursorIndex = 0;
+            renderInputState();
+            scrollToBottom();
+            return;
+        }
 
-        // If the command is a ComeFort CLI mutation, refresh the GUI after brief delay
-        String trimmed = command.trim();
-        if (trimmed.startsWith("cmf ") || trimmed.startsWith("comefort ") || trimmed.equals("cmf") || trimmed.equals("comefort")) {
-            if (onDataChanged != null) {
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(450);
-                    } catch (InterruptedException ignored) {
-                    }
-                    Platform.runLater(onDataChanged);
-                }, "GUI-Sync-Timer").start();
+        // 12. Ctrl+L: Clear screen
+        if (event.isControlDown() && code == KeyCode.L) {
+            event.consume();
+            clearConsole();
+            return;
+        }
+
+        // 13. Ctrl+V: Paste from clipboard
+        if (event.isControlDown() && code == KeyCode.V) {
+            event.consume();
+            String clip = Clipboard.getSystemClipboard().getString();
+            if (clip != null && !clip.isEmpty()) {
+                String clean = clip.replaceAll("[\r\n]", " ");
+                currentInput.insert(cursorIndex, clean);
+                cursorIndex += clean.length();
+                renderInputState();
+                scrollToBottom();
             }
+            return;
+        }
+    }
+
+    private void handleTabCompletion() {
+        String current = currentInput.toString();
+        if (current.isEmpty()) return;
+
+        for (String candidate : CMF_AUTOCOMPLETE) {
+            if (candidate.startsWith(current) && candidate.length() > current.length()) {
+                currentInput.setLength(0);
+                currentInput.append(candidate);
+                cursorIndex = currentInput.length();
+                renderInputState();
+                scrollToBottom();
+                return;
+            }
+        }
+    }
+
+    private void renderInputState() {
+        if (cursorIndex < 0) cursorIndex = 0;
+        if (cursorIndex > currentInput.length()) cursorIndex = currentInput.length();
+
+        String before = currentInput.substring(0, cursorIndex);
+        String after = currentInput.substring(cursorIndex);
+
+        inputBeforeCursor.setText(before);
+        inputAfterCursor.setText(after);
+        cursorNode.setVisible(true);
+    }
+
+    public void setInputText(String text) {
+        currentInput.setLength(0);
+        if (text != null) {
+            currentInput.append(text);
+        }
+        cursorIndex = currentInput.length();
+        renderInputState();
+        scrollToBottom();
+        focusInput();
+    }
+
+    private void detachInputNodes() {
+        consoleFlow.getChildren().removeAll(inputBeforeCursor, cursorNode, inputAfterCursor);
+    }
+
+    private void attachInputNodes() {
+        if (!consoleFlow.getChildren().contains(cursorNode)) {
+            consoleFlow.getChildren().addAll(inputBeforeCursor, cursorNode, inputAfterCursor);
         }
     }
 
     private void writeToProcess(String text) {
         if (processWriter == null || process == null || !process.isAlive()) {
-            appendSystemMessage("Process is not running. Restarting shell...\n");
-            restartShell(shellSelector.getValue());
+            appendSystemMessage("Shell is stopped. Press Enter to restart...\n");
+            statusIndicator.setText("● Stopped");
+            statusIndicator.setStyle("-fx-text-fill: #95a5a6; -fx-font-size: 11px;");
             return;
         }
 
@@ -310,36 +558,46 @@ public class TerminalPanel {
         }
     }
 
-    /**
-     * Sends ASCII ETX (Ctrl+C) to interrupt running command.
-     */
+    private void scheduleDataSync() {
+        if (onDataChanged != null) {
+            new Thread(() -> {
+                try {
+                    Thread.sleep(450);
+                } catch (InterruptedException ignored) {
+                }
+                Platform.runLater(onDataChanged);
+            }, "GUI-Sync-Timer").start();
+        }
+    }
+
     private void sendInterrupt() {
         if (processWriter != null && process != null && process.isAlive()) {
             try {
                 processWriter.write("\u0003");
                 processWriter.flush();
+                detachInputNodes();
                 appendSystemMessage("^C\n");
+                attachInputNodes();
             } catch (IOException ignored) {
             }
         }
     }
 
     /**
-     * Starts the specified shell process.
+     * Starts the specified real shell profile.
      */
-    public synchronized void startShell(String shellName) {
-        destroy(); // Terminate any existing process cleanly
+    public synchronized void startShell(ShellDetector.ShellProfile shellProfile) {
+        destroy(); // Terminate existing process cleanly
+        this.activeShell = shellProfile;
 
-        List<String> commandList = resolveShellCommand(shellName);
-        ProcessBuilder pb = new ProcessBuilder(commandList);
+        ProcessBuilder pb = new ProcessBuilder(shellProfile.launchArgs());
 
-        // Set working directory to project root
         File workDir = new File(System.getProperty("user.dir", "."));
         if (workDir.exists()) {
             pb.directory(workDir);
         }
 
-        // Augment PATH with local ComeFort distribution binaries and project directory
+        // Augment PATH with local ComeFort distribution binaries
         Map<String, String> env = pb.environment();
         String currentPath = env.getOrDefault("PATH", "");
         File binDir = new File(workDir, "build/install/comefort/bin");
@@ -349,7 +607,6 @@ public class TerminalPanel {
         env.put("COMEFORT_TERMINAL", "1");
         env.put("TERM", "xterm-256color");
 
-        // Pipe both stdout and stderr together
         pb.redirectErrorStream(true);
 
         try {
@@ -358,36 +615,67 @@ public class TerminalPanel {
             running = true;
 
             Platform.runLater(() -> {
-                statusIndicator.setText("● Active: " + shellName);
+                statusIndicator.setText("● Active: " + shellProfile.displayName());
                 statusIndicator.setStyle("-fx-text-fill: #2ecc71; -fx-font-size: 11px;");
+                shellSelector.setValue(shellProfile);
             });
 
-            // Start background reader
+            // Start background stream reader
             startOutputReader(process.getInputStream());
 
-            appendBanner(shellName, workDir.getAbsolutePath());
+            appendBanner(shellProfile, workDir.getAbsolutePath());
+
+            Platform.runLater(() -> {
+                attachInputNodes();
+                renderInputState();
+                focusInput();
+            });
 
         } catch (Exception ex) {
             running = false;
             Platform.runLater(() -> {
                 statusIndicator.setText("● Failed: " + ex.getMessage());
                 statusIndicator.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 11px;");
+                appendErrorMessage("Error launching " + shellProfile.displayName() + ": " + ex.getMessage() + "\n");
+                attachInputNodes();
             });
-            appendErrorMessage("Error launching " + shellName + ": " + ex.getMessage() + "\n");
         }
     }
 
-    private void appendBanner(String shellName, String workDir) {
-        appendSystemMessage("╔════════════════════════════════════════════════════════════════╗\n");
-        appendSystemMessage("║  ComeFort Integrated Terminal (" + shellName + ")                        \n");
-        appendSystemMessage("║  Cwd: " + workDir + "\n");
-        appendSystemMessage("║  Both 'cmf' and 'comefort' commands are directly available.   \n");
-        appendSystemMessage("╚════════════════════════════════════════════════════════════════╝\n\n");
+    public synchronized void startShell(String shellNameOrId) {
+        ShellDetector.ShellProfile target = findProfile(shellNameOrId);
+        startShell(target != null ? target : activeShell);
     }
 
-    /**
-     * Reads output from shell process in a daemon thread and flushes to UI.
-     */
+    public void restartShell(ShellDetector.ShellProfile shellProfile) {
+        clearConsole();
+        startShell(shellProfile);
+    }
+
+    public void restartShell(String shellNameOrId) {
+        clearConsole();
+        startShell(shellNameOrId);
+    }
+
+    private ShellDetector.ShellProfile findProfile(String nameOrId) {
+        if (nameOrId == null) return activeShell;
+        for (ShellDetector.ShellProfile p : installedShells) {
+            if (p.id().equalsIgnoreCase(nameOrId) || p.displayName().equalsIgnoreCase(nameOrId)) {
+                return p;
+            }
+        }
+        return activeShell;
+    }
+
+    private void appendBanner(ShellDetector.ShellProfile profile, String workDir) {
+        appendSystemMessage("┌─────────────────────────────────────────────────────────────┐\n");
+        appendSystemMessage("│ " + profile.icon() + " ComeFort Integrated Terminal — " + profile.displayName() + "\n");
+        appendSystemMessage("│ Executable: " + profile.executablePath() + "\n");
+        appendSystemMessage("│ Cwd: " + workDir + "\n");
+        appendSystemMessage("│ 'cmf' and 'comefort' commands are directly available.       │\n");
+        appendSystemMessage("└─────────────────────────────────────────────────────────────┘\n\n");
+    }
+
     private void startOutputReader(InputStream in) {
         outputReaderThread = new Thread(() -> {
             byte[] buffer = new byte[4096];
@@ -403,9 +691,13 @@ public class TerminalPanel {
                     Platform.runLater(() -> appendSystemMessage("\n[Process closed]\n"));
                 }
             } finally {
+                running = false;
                 Platform.runLater(() -> {
                     statusIndicator.setText("● Stopped");
                     statusIndicator.setStyle("-fx-text-fill: #95a5a6; -fx-font-size: 11px;");
+                    appendSystemMessage("\n[Session ended. Press Enter or click Restart to launch a new shell]\n");
+                    attachInputNodes();
+                    scrollToBottom();
                 });
             }
         }, "Terminal-Reader-" + System.currentTimeMillis());
@@ -415,10 +707,18 @@ public class TerminalPanel {
     }
 
     /**
-     * Parses ANSI color escapes and appends formatted Text nodes into the console.
+     * Parses ANSI color and screen clear sequences and appends formatted Text nodes into the console.
      */
     private void appendAnsiOutput(String text) {
         if (text == null || text.isEmpty()) return;
+
+        // Check for ANSI Clear Screen code (\u001B[2J or \u001B[3J)
+        if (text.contains("\u001B[2J") || text.contains("\u001B[3J")) {
+            clearConsole();
+            return;
+        }
+
+        detachInputNodes();
 
         Matcher matcher = ANSI_PATTERN.matcher(text);
         int lastIndex = 0;
@@ -431,9 +731,11 @@ public class TerminalPanel {
                 addTextNode(sub, currentColor, isBold);
             }
 
-            // Parse escape code
+            String commandLetter = matcher.group(2);
             String codeStr = matcher.group(1);
-            if (codeStr != null && !codeStr.isEmpty()) {
+
+            // 'm' is Select Graphic Rendition (Colors / Styles)
+            if ("m".equalsIgnoreCase(commandLetter) && codeStr != null && !codeStr.isEmpty()) {
                 String[] codes = codeStr.split(";");
                 for (String code : codes) {
                     try {
@@ -451,66 +753,84 @@ public class TerminalPanel {
                             case 34, 94 -> currentColor = Color.web("#3498db");
                             case 35, 95 -> currentColor = Color.web("#9b59b6");
                             case 36, 96 -> currentColor = Color.web("#1abc9c");
-                            case 37, 97 -> currentColor = Color.web("#ffffff");
-                            case 90 -> currentColor = Color.web("#888888");
+                            case 37, 97 -> currentColor = Color.web("#ecf0f1");
+                            default -> {
+                            }
                         }
                     } catch (NumberFormatException ignored) {
                     }
                 }
-            } else {
-                // Reset
-                currentColor = Color.web("#e0e0e0");
-                isBold = false;
+            } else if ("J".equals(commandLetter)) {
+                // Erase in Display
+                if ("2".equals(codeStr) || "3".equals(codeStr)) {
+                    clearConsole();
+                    return;
+                }
             }
-
             lastIndex = matcher.end();
         }
 
         if (lastIndex < text.length()) {
-            String remaining = text.substring(lastIndex);
-            addTextNode(remaining, currentColor, isBold);
+            addTextNode(text.substring(lastIndex), currentColor, isBold);
         }
 
-        // Bound nodes to prevent memory unbounded growth
-        if (consoleFlow.getChildren().size() > MAX_CONSOLE_NODES) {
-            consoleFlow.getChildren().remove(0, 600);
-        }
-
-        // Auto-scroll to bottom
-        scrollPane.layout();
-        scrollPane.setVvalue(1.0);
+        trimConsoleNodes();
+        attachInputNodes();
+        scrollToBottom();
     }
 
-    private void addTextNode(String text, Color color, boolean bold) {
-        Text node = new Text(text);
-        node.setFont(Font.font(FONT_FAMILY, bold ? FontWeight.BOLD : FontWeight.NORMAL, FONT_SIZE));
-        node.setFill(color);
-        consoleFlow.getChildren().add(node);
+    private void addTextNode(String content, Color color, boolean isBold) {
+        if (content.isEmpty()) return;
+        Text t = new Text(content);
+        t.setFont(Font.font(FONT_FAMILY, isBold ? FontWeight.BOLD : FontWeight.NORMAL, FONT_SIZE));
+        t.setFill(color);
+        consoleFlow.getChildren().add(t);
     }
 
     public void appendSystemMessage(String msg) {
-        addTextNode(msg, Color.web("#3498db"), false);
-        scrollPane.layout();
-        scrollPane.setVvalue(1.0);
+        detachInputNodes();
+        Text t = new Text(msg);
+        t.setFont(Font.font(FONT_FAMILY, FontWeight.NORMAL, FONT_SIZE));
+        t.setFill(Color.web("#58a6ff"));
+        consoleFlow.getChildren().add(t);
+        trimConsoleNodes();
+        attachInputNodes();
+        scrollToBottom();
     }
 
     public void appendErrorMessage(String msg) {
-        addTextNode(msg, Color.web("#e74c3c"), true);
-        scrollPane.layout();
-        scrollPane.setVvalue(1.0);
+        detachInputNodes();
+        Text t = new Text(msg);
+        t.setFont(Font.font(FONT_FAMILY, FontWeight.NORMAL, FONT_SIZE));
+        t.setFill(Color.web("#e74c3c"));
+        consoleFlow.getChildren().add(t);
+        trimConsoleNodes();
+        attachInputNodes();
+        scrollToBottom();
+    }
+
+    private void trimConsoleNodes() {
+        int size = consoleFlow.getChildren().size();
+        if (size > MAX_CONSOLE_NODES) {
+            consoleFlow.getChildren().remove(0, size - MAX_CONSOLE_NODES);
+        }
+    }
+
+    private void scrollToBottom() {
+        Platform.runLater(() -> scrollPane.setVvalue(1.0));
     }
 
     public void clearConsole() {
+        detachInputNodes();
         consoleFlow.getChildren().clear();
-    }
-
-    public void restartShell(String shellName) {
-        clearConsole();
-        startShell(shellName);
+        attachInputNodes();
+        renderInputState();
+        scrollToBottom();
+        focusInput();
     }
 
     public void focusInput() {
-        Platform.runLater(inputField::requestFocus);
+        Platform.runLater(scrollPane::requestFocus);
     }
 
     private void toggleMaximize() {
@@ -520,7 +840,7 @@ public class TerminalPanel {
             rootNode.setPrefHeight(currentHeight);
             maxRestoreBtn.setText("🗗");
         } else {
-            currentHeight = 260.0;
+            currentHeight = 270.0;
             rootNode.setPrefHeight(currentHeight);
             maxRestoreBtn.setText("⤢");
         }
@@ -530,11 +850,11 @@ public class TerminalPanel {
         return rootNode;
     }
 
-    /**
-     * Cleanly terminates the background shell process.
-     */
     public synchronized void destroy() {
         running = false;
+        if (cursorTimeline != null) {
+            cursorTimeline.stop();
+        }
         if (process != null) {
             try {
                 if (processWriter != null) {
@@ -548,63 +868,6 @@ public class TerminalPanel {
         if (outputReaderThread != null) {
             outputReaderThread.interrupt();
             outputReaderThread = null;
-        }
-    }
-
-    // --- Shell Detection & Resolution ---
-
-    private static boolean isWindows() {
-        return System.getProperty("os.name", "").toLowerCase().contains("win");
-    }
-
-    private static String detectDefaultShell() {
-        if (isWindows()) {
-            return "PowerShell";
-        }
-        return "Bash";
-    }
-
-    private static List<String> getAvailableShells() {
-        List<String> shells = new ArrayList<>();
-        if (isWindows()) {
-            shells.add("PowerShell");
-            shells.add("Command Prompt");
-            // Check Git Bash
-            if (new File("C:\\Program Files\\Git\\bin\\bash.exe").exists()
-                    || new File("C:\\Program Files (x86)\\Git\\bin\\bash.exe").exists()) {
-                shells.add("Git Bash");
-            }
-        } else {
-            shells.add("Bash");
-            shells.add("Zsh");
-            shells.add("Sh");
-        }
-        return shells;
-    }
-
-    private static List<String> resolveShellCommand(String shellName) {
-        if (isWindows()) {
-            if ("Command Prompt".equalsIgnoreCase(shellName)) {
-                return List.of("cmd.exe", "/K");
-            }
-            if ("Git Bash".equalsIgnoreCase(shellName)) {
-                if (new File("C:\\Program Files\\Git\\bin\\bash.exe").exists()) {
-                    return List.of("C:\\Program Files\\Git\\bin\\bash.exe", "-i");
-                }
-                if (new File("C:\\Program Files (x86)\\Git\\bin\\bash.exe").exists()) {
-                    return List.of("C:\\Program Files (x86)\\Git\\bin\\bash.exe", "-i");
-                }
-            }
-            // Default PowerShell
-            return List.of("powershell.exe", "-NoLogo", "-NoExit", "-ExecutionPolicy", "Bypass");
-        } else {
-            if ("Zsh".equalsIgnoreCase(shellName)) {
-                return List.of("/bin/zsh", "-i");
-            }
-            if ("Sh".equalsIgnoreCase(shellName)) {
-                return List.of("/bin/sh", "-i");
-            }
-            return List.of("/bin/bash", "-i");
         }
     }
 }

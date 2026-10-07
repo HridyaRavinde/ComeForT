@@ -2,6 +2,7 @@
 setlocal
 
 if "%~1"=="" goto help
+if /i "%~1"=="live" goto run_live
 if /i "%~1"=="gui" goto run_gui
 if /i "%~1"=="watch" goto run_watch
 if /i "%~1"=="test" goto run_test
@@ -10,6 +11,10 @@ if /i "%~1"=="help" goto help
 
 :: Pass everything to CLI
 goto run_cli
+
+:run_live
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dev.ps1 live
+goto end
 
 :run_gui
 echo [ComeFort Dev] Launching Desktop GUI...
@@ -40,8 +45,9 @@ goto end
 echo.
 echo  ComeFort Developer Runner (Dev Mode)
 echo  ====================================
-echo  dev gui             - Launch Desktop GUI instantly
-echo  dev watch           - Continuous file watcher (like npm run dev)
+echo  dev live            - Real-Time Live Mode (auto-recompiles & relaunches on Ctrl+S)
+echo  dev gui             - Launch Desktop GUI once
+echo  dev watch           - Continuous file watcher (compiles on save)
 echo  dev test            - Run test suite
 echo  dev build           - Rebuild local distribution
 echo.
