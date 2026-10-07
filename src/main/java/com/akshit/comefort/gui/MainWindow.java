@@ -5,14 +5,25 @@ import com.akshit.comefort.db.DatabaseManager;
 import com.akshit.comefort.gui.screens.*;
 import com.akshit.comefort.repository.*;
 import com.akshit.comefort.service.*;
+import com.akshit.comefort.gui.components.TerminalPanel;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.*;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
@@ -44,6 +55,9 @@ public class MainWindow extends Application {
     private BorderPane rootLayout;
     private VBox sidebar;
     private StackPane contentPane;
+    private SplitPane centerSplit;
+    private TerminalPanel terminalPanel;
+    private boolean terminalVisible = false;
     private Theme.Mode currentTheme = Theme.Mode.DARK;
     private final Map<String, Label> navItems = new LinkedHashMap<>();
     private String activeNavId = "today";
@@ -56,6 +70,10 @@ public class MainWindow extends Application {
     private InboxScreen inboxScreen;
     private SearchScreen searchScreen;
     private StatusScreen statusScreen;
+
+    // --- Dev Live Reload ---
+    private WatchService styleWatchService;
+    private Thread styleWatcherThread;
 
     @Override
     public void start(Stage primaryStage) {
@@ -71,6 +89,30 @@ public class MainWindow extends Application {
 
         Scene scene = new Scene(rootLayout);
         applyTheme(scene);
+
+        // Global shortcuts for integrated terminal
+        scene.getAccelerators().put(
+                new KeyCodeCombination(KeyCode.BACK_QUOTE, KeyCombination.CONTROL_DOWN),
+                this::toggleTerminal
+        );
+        scene.getAccelerators().put(
+                new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN),
+                this::toggleTerminal
+        );
+
+        // Real-time Dev Hot Reload (F5 or Ctrl+R): Re-applies styles & refreshes screen
+        scene.getAccelerators().put(
+                new KeyCodeCombination(KeyCode.F5),
+                () -> hotReload(scene)
+        );
+        scene.getAccelerators().put(
+                new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN),
+                () -> hotReload(scene)
+        );
+
+        // Start live filesystem CSS watcher for instantaneous live-reloading during development
+        setupStyleWatcher(scene);
+
         primaryStage.setScene(scene);
         primaryStage.show();
 
@@ -126,7 +168,15 @@ public class MainWindow extends Application {
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
         scrollPane.setStyle("-fx-background-color: transparent;");
-        rootLayout.setCenter(scrollPane);
+
+        // Initialize integrated terminal panel
+        terminalPanel = new TerminalPanel(this::refreshCurrentScreen, this::toggleTerminal);
+
+        // Center SplitPane allowing vertical split between screens and terminal
+        centerSplit = new SplitPane();
+        centerSplit.setOrientation(Orientation.VERTICAL);
+        centerSplit.getItems().add(scrollPane);
+        rootLayout.setCenter(centerSplit);
     }
 
     /**
@@ -154,6 +204,7 @@ public class MainWindow extends Application {
         // Section: Tools
         addSectionLabel(sidebarBox, "TOOLS");
         addNavItem(sidebarBox, "search", "🔎", "Search", "cmf search <query>");
+        addNavItem(sidebarBox, "terminal", "⌨", "Terminal", "Toggle Terminal (Ctrl+`)");
 
         // Spacer
         Region spacer = new Region();
@@ -204,11 +255,51 @@ public class MainWindow extends Application {
     }
 
     /**
+     * Toggles the integrated terminal at the bottom of the window.
+     */
+    public void toggleTerminal() {
+        terminalVisible = !terminalVisible;
+        if (terminalVisible) {
+            if (!centerSplit.getItems().contains(terminalPanel.getView())) {
+                centerSplit.getItems().add(terminalPanel.getView());
+                centerSplit.setDividerPositions(0.68);
+            }
+            terminalPanel.focusInput();
+            updateTerminalNavState(true);
+        } else {
+            centerSplit.getItems().remove(terminalPanel.getView());
+            updateTerminalNavState(false);
+        }
+    }
+
+    private void updateTerminalNavState(boolean open) {
+        Label terminalNav = navItems.get("terminal");
+        if (terminalNav != null) {
+            if (open) {
+                if (!terminalNav.getStyleClass().contains("active")) {
+                    terminalNav.getStyleClass().add("active");
+                }
+            } else {
+                terminalNav.getStyleClass().remove("active");
+            }
+        }
+    }
+
+    /**
      * Navigates to a screen, updating the sidebar active state.
      */
     public void navigateTo(String screenId) {
+        if ("terminal".equals(screenId)) {
+            toggleTerminal();
+            return;
+        }
+
         // Update sidebar active state
         navItems.forEach((id, item) -> {
+            if ("terminal".equals(id)) {
+                // Keep terminal active state matching terminalVisible
+                return;
+            }
             if (id.equals(screenId)) {
                 if (!item.getStyleClass().contains("active")) {
                     item.getStyleClass().add("active");
@@ -247,13 +338,102 @@ public class MainWindow extends Application {
      */
     private void applyTheme(Scene scene) {
         scene.getStylesheets().clear();
-        String baseCss = getClass().getResource(Theme.getBaseStylesheet()).toExternalForm();
-        String themeCss = getClass().getResource(Theme.getStylesheet(currentTheme)).toExternalForm();
-        scene.getStylesheets().addAll(baseCss, themeCss);
+        String baseCss = getStylesheetUrl(Theme.getBaseStylesheet());
+        String themeCss = getStylesheetUrl(Theme.getStylesheet(currentTheme));
+        if (baseCss != null) {
+            scene.getStylesheets().add(baseCss);
+        }
+        if (themeCss != null) {
+            scene.getStylesheets().add(themeCss);
+        }
+    }
+
+    /**
+     * Resolves stylesheet URL, prioritizing source files on disk during development
+     * with cache-busting to enable instant hot-reload without restarting.
+     */
+    private String getStylesheetUrl(String resourcePath) {
+        File localFile = new File("src/main/resources" + resourcePath);
+        if (localFile.exists()) {
+            return localFile.toURI().toString() + "#t=" + System.currentTimeMillis();
+        }
+        var res = getClass().getResource(resourcePath);
+        return res != null ? res.toExternalForm() : null;
+    }
+
+    /**
+     * Sets up a filesystem WatchService on the styles directory to automatically
+     * trigger hot reload when any .css file is modified or saved during development.
+     */
+    private void setupStyleWatcher(Scene scene) {
+        Path styleDir = Paths.get("src", "main", "resources", "styles");
+        if (!Files.exists(styleDir)) {
+            return;
+        }
+
+        try {
+            styleWatchService = FileSystems.getDefault().newWatchService();
+            styleDir.register(styleWatchService, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_CREATE);
+
+            styleWatcherThread = new Thread(() -> {
+                try {
+                    while (!Thread.currentThread().isInterrupted()) {
+                        WatchKey key = styleWatchService.take();
+                        boolean hasCssChange = false;
+                        for (WatchEvent<?> event : key.pollEvents()) {
+                            Path changed = (Path) event.context();
+                            if (changed.toString().endsWith(".css")) {
+                                hasCssChange = true;
+                            }
+                        }
+                        if (hasCssChange) {
+                            // Debounce write burst
+                            Thread.sleep(100);
+                            Platform.runLater(() -> hotReload(scene));
+                        }
+                        if (!key.reset()) {
+                            break;
+                        }
+                    }
+                } catch (InterruptedException | ClosedWatchServiceException ignored) {
+                    // Thread terminated gracefully
+                }
+            }, "comefort-css-watcher");
+            styleWatcherThread.setDaemon(true);
+            styleWatcherThread.start();
+        } catch (IOException e) {
+            System.err.println("[Dev] Could not start CSS watcher: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Manually or automatically triggered hot reload: Re-applies stylesheets and
+     * re-renders the current screen with fresh database queries.
+     */
+    public void hotReload(Scene scene) {
+        try {
+            applyTheme(scene);
+            refreshCurrentScreen();
+            System.out.println("[Dev] Hot reload applied: Styles & active screen re-rendered.");
+        } catch (Exception e) {
+            System.err.println("[Dev] Failed to hot reload: " + e.getMessage());
+        }
     }
 
     @Override
     public void stop() {
+        if (styleWatcherThread != null) {
+            styleWatcherThread.interrupt();
+        }
+        if (styleWatchService != null) {
+            try {
+                styleWatchService.close();
+            } catch (IOException ignored) {
+            }
+        }
+        if (terminalPanel != null) {
+            terminalPanel.destroy();
+        }
         if (dbManager != null) {
             dbManager.close();
         }

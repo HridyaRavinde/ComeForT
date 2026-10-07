@@ -50,6 +50,7 @@ ComeFort uses a pragmatic, production-grade **Layered Architecture** with clean 
 - **🔎 Cross-Entity Keyword Search**: Multi-field indexed search across tasks, projects, notes, and inbox items with disambiguation guards.
 - **🔥 Today Dashboard**: Real-time overview of overdue tasks, tasks due today, high-priority work, and inbox counters.
 - **🖥️ Dual CLI & JavaFX GUI**: Every CLI command, flag, and option is mirrored 1:1 in the GUI with dynamic CLI preview generation.
+- **⌨️ VS Code-Style Integrated Terminal**: Built-in real OS terminal connected directly to your system shell (PowerShell / Command Prompt / Bash). Features live bidirectional I/O, ANSI color rendering, command history navigation (Up/Down arrows), quick command shortcuts, and instant toggle via `Ctrl+`` or `Ctrl+T`.
 
 ---
 
@@ -119,6 +120,7 @@ cmf --gui
 
 The GUI includes:
 - **Sidebar Navigation**: Instant switching between Today, Inbox, Projects, Tasks, Notes, Search, and Status.
+- **⌨️ Integrated Real Terminal**: Toggle anytime with `Ctrl+`` or `Ctrl+T` or from the sidebar. Real OS process (PowerShell / CMD), ANSI colors, command history, and live GUI auto-sync when CLI commands modify data.
 - **Command Form Builder**: Dynamic form generation where every single CLI flag and parameter has an interactive UI control.
 - **CLI Sync Preview**: Real-time display of the equivalent CLI command being executed by the GUI action.
 - **Dark & Light Mode**: Clean, developer-tailored theme system.
@@ -137,7 +139,7 @@ Execute the comprehensive JUnit 5 integration test suite:
 ./gradlew test
 ```
 
-### Running CLI Locally
+### Running CLI & GUI Locally
 ```bash
 ./gradlew run --args="--help"
 ./gradlew run --args="today"
@@ -145,6 +147,35 @@ Execute the comprehensive JUnit 5 integration test suite:
 .\dev today
 .\dev gui
 ```
+
+---
+
+## ⚡ Real-Time Development Mode (Like `npm run dev`)
+
+ComeFort provides built-in mechanisms to see changes in real time without restarting:
+
+1. **🎨 Instant CSS Live-Reload (Hot Styling)**:
+   - While the GUI is running, any edits saved in `src/main/resources/styles/*.css` are instantly reloaded on the screen within ~100ms via JavaFX's filesystem `WatchService`.
+   - No app restart required.
+
+2. **🔄 In-App Screen & Data Hot-Reload (`F5` / `Ctrl + R`)**:
+   - Press **`F5`** or **`Ctrl + R`** anywhere inside the GUI.
+   - It re-evaluates all stylesheets and re-queries SQLite, instantly re-rendering the active screen with the latest data and UI layouts.
+
+3. **🔁 Continuous Background Compilation (`dev watch`)**:
+   - In a terminal, run:
+     ```bash
+     .\dev watch
+     # Or: .\gradlew.bat -t classes
+     ```
+   - Gradle continuously watches all `.java` files and auto-recompiles incremental changes on save (`Ctrl + S`).
+
+4. **⌨️ Integrated Terminal Live-Sync**:
+   - Open the integrated terminal (`Ctrl + ` ` or `Ctrl + T`).
+   - Run any command (`cmf task add ...`, `cmf inbox done ...`).
+   - The GUI automatically detects CLI mutations and refreshes the desktop screen within ~450ms.
+
+---
 
 ### Building Distribution Binaries
 

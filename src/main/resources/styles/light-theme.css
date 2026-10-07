@@ -262,3 +262,19 @@
     -fx-background-radius: 6;
     -fx-font-size: 12px;
 }
+
+/* SplitPane */
+.split-pane {
+    -fx-background-color: transparent;
+    -fx-box-border: transparent;
+    -fx-padding: 0;
+}
+
+.split-pane *.split-pane-divider {
+    -fx-padding: 2px;
+    -fx-background-color: #e3e3e0;
+}
+
+.split-pane *.split-pane-divider:hover {
+    -fx-background-color: #2383e2;
+}
