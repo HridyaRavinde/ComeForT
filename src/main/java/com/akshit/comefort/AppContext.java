@@ -69,9 +69,7 @@ public class AppContext {
     }
 
     public synchronized void ensureInitialized() {
-        if (!dbManager.isDatabaseInitialized()) {
-            dbManager.initialize();
-        }
+        dbManager.initialize();
     }
 
     public synchronized void close() {

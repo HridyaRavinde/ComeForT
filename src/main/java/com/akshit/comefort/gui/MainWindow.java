@@ -16,6 +16,7 @@ import javafx.scene.Scene;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
@@ -24,6 +25,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
@@ -54,6 +56,8 @@ public class MainWindow extends Application {
     // --- UI components ---
     private BorderPane rootLayout;
     private VBox sidebar;
+    private boolean sidebarVisible = true;
+    private Button expandSidebarBtn;
     private StackPane contentPane;
     private SplitPane centerSplit;
     private TerminalPanel terminalPanel;
@@ -90,7 +94,27 @@ public class MainWindow extends Application {
         Scene scene = new Scene(rootLayout);
         applyTheme(scene);
 
-        // Global shortcuts for integrated terminal
+        // Global EventFilter: Guarantees Ctrl+J (bottom panel) and Ctrl+B (primary panel)
+        // are captured first, even when terminal or text inputs have focus
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (new KeyCodeCombination(KeyCode.J, KeyCombination.CONTROL_DOWN).match(event)) {
+                toggleTerminal();
+                event.consume();
+            } else if (new KeyCodeCombination(KeyCode.B, KeyCombination.CONTROL_DOWN).match(event)) {
+                togglePrimaryPanel();
+                event.consume();
+            }
+        });
+
+        // Global accelerators for panels and terminal
+        scene.getAccelerators().put(
+                new KeyCodeCombination(KeyCode.J, KeyCombination.CONTROL_DOWN),
+                this::toggleTerminal
+        );
+        scene.getAccelerators().put(
+                new KeyCodeCombination(KeyCode.B, KeyCombination.CONTROL_DOWN),
+                this::togglePrimaryPanel
+        );
         scene.getAccelerators().put(
                 new KeyCodeCombination(KeyCode.BACK_QUOTE, KeyCombination.CONTROL_DOWN),
                 this::toggleTerminal
@@ -116,8 +140,31 @@ public class MainWindow extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
 
-        // Show today screen by default
-        navigateTo("today");
+        // Show last active screen (during dev live reload) or today screen by default
+        navigateTo(getInitialScreen());
+    }
+
+    private void saveDevScreenState(String screenId) {
+        try {
+            File stateFile = new File("build/.dev-last-screen");
+            stateFile.getParentFile().mkdirs();
+            Files.writeString(stateFile.toPath(), screenId);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private String getInitialScreen() {
+        try {
+            File stateFile = new File("build/.dev-last-screen");
+            if (stateFile.exists()) {
+                String saved = Files.readString(stateFile.toPath()).trim();
+                if (!saved.isEmpty() && !"terminal".equals(saved)) {
+                    return saved;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return "today";
     }
 
     /**
@@ -169,13 +216,27 @@ public class MainWindow extends Application {
         scrollPane.setFitToHeight(true);
         scrollPane.setStyle("-fx-background-color: transparent;");
 
+        // Center container wrapping scrollPane and the collapsed sidebar expand button
+        StackPane centerContainer = new StackPane();
+        centerContainer.getChildren().add(scrollPane);
+
+        expandSidebarBtn = new Button("◫");
+        expandSidebarBtn.getStyleClass().add("sidebar-expand-btn");
+        expandSidebarBtn.setTooltip(new Tooltip("Expand Primary Panel (Ctrl+B)"));
+        expandSidebarBtn.setOnAction(e -> togglePrimaryPanel());
+        expandSidebarBtn.setVisible(false);
+        expandSidebarBtn.setManaged(false);
+        StackPane.setAlignment(expandSidebarBtn, Pos.TOP_LEFT);
+        StackPane.setMargin(expandSidebarBtn, new Insets(10, 0, 0, 10));
+        centerContainer.getChildren().add(expandSidebarBtn);
+
         // Initialize integrated terminal panel
         terminalPanel = new TerminalPanel(this::refreshCurrentScreen, this::toggleTerminal);
 
         // Center SplitPane allowing vertical split between screens and terminal
         centerSplit = new SplitPane();
         centerSplit.setOrientation(Orientation.VERTICAL);
-        centerSplit.getItems().add(scrollPane);
+        centerSplit.getItems().add(centerContainer);
         rootLayout.setCenter(centerSplit);
     }
 
@@ -186,10 +247,24 @@ public class MainWindow extends Application {
         VBox sidebarBox = new VBox();
         sidebarBox.getStyleClass().add("sidebar");
 
-        // Brand
+        // Brand & Primary Panel Toggle
+        HBox brandHeader = new HBox(8);
+        brandHeader.setAlignment(Pos.CENTER_LEFT);
+        brandHeader.getStyleClass().add("brand-header");
+
         Label brand = new Label("◈ ComeFort");
         brand.getStyleClass().add("brand");
-        sidebarBox.getChildren().add(brand);
+
+        Region brandSpacer = new Region();
+        HBox.setHgrow(brandSpacer, Priority.ALWAYS);
+
+        Button toggleSidebarBtn = new Button("◫");
+        toggleSidebarBtn.getStyleClass().add("sidebar-toggle-btn");
+        toggleSidebarBtn.setTooltip(new Tooltip("Collapse Primary Panel (Ctrl+B)"));
+        toggleSidebarBtn.setOnAction(e -> togglePrimaryPanel());
+
+        brandHeader.getChildren().addAll(brand, brandSpacer, toggleSidebarBtn);
+        sidebarBox.getChildren().add(brandHeader);
 
         // Main navigation
         addNavItem(sidebarBox, "today", "🔥", "Today", "cmf today");
@@ -204,7 +279,7 @@ public class MainWindow extends Application {
         // Section: Tools
         addSectionLabel(sidebarBox, "TOOLS");
         addNavItem(sidebarBox, "search", "🔎", "Search", "cmf search <query>");
-        addNavItem(sidebarBox, "terminal", "⌨", "Terminal", "Toggle Terminal (Ctrl+`)");
+        addNavItem(sidebarBox, "terminal", "⌨", "Terminal", "Toggle Bottom Panel (Ctrl+J / Ctrl+`)");
 
         // Spacer
         Region spacer = new Region();
@@ -255,7 +330,35 @@ public class MainWindow extends Application {
     }
 
     /**
-     * Toggles the integrated terminal at the bottom of the window.
+     * Toggles the primary sidebar navigation panel on the left (Ctrl+B).
+     */
+    public void togglePrimaryPanel() {
+        sidebarVisible = !sidebarVisible;
+        if (sidebarVisible) {
+            rootLayout.setLeft(sidebar);
+            if (expandSidebarBtn != null) {
+                expandSidebarBtn.setVisible(false);
+                expandSidebarBtn.setManaged(false);
+            }
+        } else {
+            rootLayout.setLeft(null);
+            if (expandSidebarBtn != null) {
+                expandSidebarBtn.setVisible(true);
+                expandSidebarBtn.setManaged(true);
+            }
+        }
+    }
+
+    public boolean isSidebarVisible() {
+        return sidebarVisible;
+    }
+
+    public boolean isTerminalVisible() {
+        return terminalVisible;
+    }
+
+    /**
+     * Toggles the integrated terminal at the bottom of the window (Ctrl+J).
      */
     public void toggleTerminal() {
         terminalVisible = !terminalVisible;
@@ -310,6 +413,7 @@ public class MainWindow extends Application {
         });
 
         activeNavId = screenId;
+        saveDevScreenState(screenId);
 
         // Swap content
         contentPane.getChildren().clear();

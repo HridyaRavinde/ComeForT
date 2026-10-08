@@ -1,13 +1,14 @@
 @echo off
 setlocal
 
-if "%~1"=="" goto help
+if "%~1"=="" goto run_live
 if /i "%~1"=="live" goto run_live
-if /i "%~1"=="gui" goto run_gui
+if /i "%~1"=="gui" goto run_live
 if /i "%~1"=="watch" goto run_watch
 if /i "%~1"=="test" goto run_test
 if /i "%~1"=="build" goto run_build
 if /i "%~1"=="help" goto help
+if /i "%~1"=="--help" goto help
 
 :: Pass everything to CLI
 goto run_cli
@@ -17,7 +18,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dev.ps1 live
 goto end
 
 :run_gui
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dev.ps1 gui
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dev.ps1 live
 goto end
 
 :run_watch

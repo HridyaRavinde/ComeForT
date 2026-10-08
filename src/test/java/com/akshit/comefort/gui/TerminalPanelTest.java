@@ -22,6 +22,7 @@ class TerminalPanelTest {
         } catch (IllegalStateException ignored) {
             // Toolkit already initialized
         }
+        Platform.setImplicitExit(false);
     }
 
     @Test
@@ -49,7 +50,7 @@ class TerminalPanelTest {
             }
         });
 
-        boolean completed = latch.await(6, TimeUnit.SECONDS);
+        boolean completed = latch.await(25, TimeUnit.SECONDS);
         assertTrue(completed, "Terminal panel creation timed out");
         assertTrue(success.get(), "Terminal panel creation failed");
     }

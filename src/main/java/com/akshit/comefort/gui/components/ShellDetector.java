@@ -47,7 +47,7 @@ public class ShellDetector {
         if (shells.isEmpty()) {
             if (IS_WINDOWS) {
                 shells.add(new ShellProfile("cmd", "Command Prompt", "cmd.exe",
-                        List.of("cmd.exe", "/Q", "/K"), "⌨", "Windows Command Processor"));
+                        List.of("cmd.exe", "/Q", "/K", "chcp 65001 >nul"), "⌨", "Windows Command Processor"));
             } else {
                 shells.add(new ShellProfile("sh", "Sh", "/bin/sh",
                         List.of("/bin/sh", "-i"), "🐚", "Standard Shell"));
@@ -109,7 +109,8 @@ public class ShellDetector {
                     "pwsh",
                     "PowerShell 7",
                     pwshPath,
-                    List.of(pwshPath, "-NoLogo"),
+                    List.of(pwshPath, "-NoLogo", "-NoExit", "-Command",
+                            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; [Console]::InputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8"),
                     "⚡",
                     "PowerShell 7 (Core)"
             ));
@@ -128,7 +129,8 @@ public class ShellDetector {
                     "powershell",
                     "Windows PowerShell",
                     winPsPath,
-                    List.of(winPsPath, "-NoLogo"),
+                    List.of(winPsPath, "-NoLogo", "-NoExit", "-Command",
+                            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; [Console]::InputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8"),
                     "",
                     "Windows PowerShell 5.1"
             ));
@@ -147,7 +149,7 @@ public class ShellDetector {
                     "cmd",
                     "Command Prompt",
                     cmdPath,
-                    List.of(cmdPath),
+                    List.of(cmdPath, "/Q", "/K", "chcp 65001 >nul"),
                     "⌨",
                     "Windows Command Processor"
             ));

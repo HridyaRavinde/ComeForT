@@ -171,6 +171,9 @@ public class App implements Runnable {
                         app.noteService, app.captureService,
                         app.activityService, app.formatter));
 
+        cmd.addSubcommand("cmds",
+                new CmdsCommand(app.formatter));
+
         // Set up execution strategy that initializes DB before every command
         cmd.setExecutionStrategy(parseResult -> {
             // Check if help or version was requested anywhere in command hierarchy
@@ -184,9 +187,11 @@ public class App implements Runnable {
                 }
             }
 
-            boolean isGuiCommand = parseResult.hasSubcommand() && "gui".equals(parseResult.subcommand().commandSpec().name());
+            boolean isNoDbCommand = parseResult.hasSubcommand() &&
+                    ("gui".equals(parseResult.subcommand().commandSpec().name()) ||
+                     "cmds".equals(parseResult.subcommand().commandSpec().name()));
 
-            if (!isHelpRequested && !isGuiCommand) {
+            if (!isHelpRequested && !isNoDbCommand) {
                 app.ensureInitialized();
             }
 
@@ -211,6 +216,14 @@ public class App implements Runnable {
     }
 
     public static void main(String[] args) {
+        // Enforce UTF-8 standard console output so emojis, box-drawing characters,
+        // and unicode symbols (—, 🔥, ✓, ⚠) render cleanly in all terminals.
+        try {
+            System.setOut(new java.io.PrintStream(new java.io.FileOutputStream(java.io.FileDescriptor.out), true, java.nio.charset.StandardCharsets.UTF_8));
+            System.setErr(new java.io.PrintStream(new java.io.FileOutputStream(java.io.FileDescriptor.err), true, java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Exception ignored) {
+        }
+
         App app = new App();
         CommandLine cmd = createCommandLine(app);
 

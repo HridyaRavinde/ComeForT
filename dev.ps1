@@ -3,12 +3,13 @@ param(
     [string[]]$CommandArgs
 )
 
-if (-not $CommandArgs -or $CommandArgs.Length -eq 0 -or $CommandArgs[0] -eq "help") {
+if ($CommandArgs -and $CommandArgs.Length -gt 0 -and ($CommandArgs[0] -in "help", "--help", "-h")) {
     Write-Host ""
     Write-Host " ComeFort Developer Runner (PowerShell)" -ForegroundColor Cyan
     Write-Host " ======================================" -ForegroundColor DarkGray
-    Write-Host " .\dev.ps1 live          - Real-Time Live Mode (like 'npm run dev')" -ForegroundColor Green
-    Write-Host " .\dev.ps1 gui           - Launch Desktop GUI once"
+    Write-Host " .\dev.ps1               - Real-Time Live Mode (like 'npm run dev')" -ForegroundColor Green
+    Write-Host " .\dev.ps1 gui           - Launch Desktop GUI with Live Reload" -ForegroundColor Green
+    Write-Host " .\dev.ps1 live          - Launch Desktop GUI with Live Reload" -ForegroundColor Green
     Write-Host " .\dev.ps1 watch         - Continuous file watcher (compiles on save)"
     Write-Host " .\dev.ps1 test          - Run test suite"
     Write-Host " .\dev.ps1 build         - Rebuild local distribution"
@@ -24,7 +25,7 @@ if (-not $CommandArgs -or $CommandArgs.Length -eq 0 -or $CommandArgs[0] -eq "hel
     exit 0
 }
 
-$action = $CommandArgs[0].ToLower()
+$action = if (-not $CommandArgs -or $CommandArgs.Length -eq 0) { "live" } else { $CommandArgs[0].ToLower() }
 
 function Get-JavaCommand {
     if ($env:JAVA_HOME) {
@@ -51,13 +52,14 @@ function Start-GuiProc {
 }
 
 switch ($action) {
-    "live" {
+    { $_ -in "live", "gui" } {
         Write-Host ""
         Write-Host " ========================================================" -ForegroundColor Cyan
         Write-Host "  ComeFort Real-Time Live Mode (like 'npm run dev')" -ForegroundColor Yellow
         Write-Host " ========================================================" -ForegroundColor Cyan
         Write-Host " -> CSS Changes: Instant live-reload on Ctrl+S (0s, no restart)" -ForegroundColor Green
         Write-Host " -> Java Changes: Auto-recompiles & relaunches on Ctrl+S" -ForegroundColor Green
+        Write-Host " -> State Preserved: Keeps active screen across reloads" -ForegroundColor Green
         Write-Host " -> In-App Refresh: Press F5 or Ctrl+R in GUI anytime" -ForegroundColor Green
         Write-Host " -> Press Ctrl+C in this terminal to stop." -ForegroundColor DarkGray
         Write-Host ""
@@ -69,13 +71,13 @@ switch ($action) {
             & .\gradlew.bat classes --quiet --console=plain
         }
 
-        # Watch src/main/java for code changes
-        $srcPath = Join-Path (Get-Location) "src\main\java"
+        # Watch src/main for code and resource changes (with atomic save detection)
+        $srcPath = Join-Path (Get-Location) "src\main"
         $watcher = New-Object System.IO.FileSystemWatcher
         $watcher.Path = $srcPath
         $watcher.IncludeSubdirectories = $true
         $watcher.EnableRaisingEvents = $true
-        $watcher.Filter = "*.java"
+        $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::CreationTime
 
         $guiProc = Start-GuiProc -javaCmd $javaCmd
         Write-Host "[ComeFort Live] Desktop GUI window is now open (PID: $($guiProc.Id)). Monitoring for changes..." -ForegroundColor Cyan
@@ -87,9 +89,15 @@ switch ($action) {
                     break
                 }
 
-                # Check for file changes
-                $change = $watcher.WaitForChanged([System.IO.WatcherChangeTypes]::Changed -bor [System.IO.WatcherChangeTypes]::Created, 1000)
+                # Catch changes, creations, and atomic save renames
+                $change = $watcher.WaitForChanged([System.IO.WatcherChangeTypes]::All, 800)
                 if ($change.TimedOut) {
+                    continue
+                }
+
+                # If CSS changed, the JavaFX in-app CSS watcher handles it instantly without restart
+                if ($change.Name.EndsWith(".css")) {
+                    Write-Host "[ComeFort Live] Style updated: $($change.Name) (Hot-reloaded in-app ⚡)" -ForegroundColor Magenta
                     continue
                 }
 
@@ -118,16 +126,6 @@ switch ($action) {
                 Stop-Process -Id $guiProc.Id -Force -ErrorAction SilentlyContinue
             }
         }
-    }
-    "gui" {
-        Write-Host "[ComeFort Dev] Launching Desktop GUI..." -ForegroundColor Green
-        Write-Host "[ComeFort Dev] GUI Window is now running. (Close the GUI window to return)" -ForegroundColor DarkGray
-        $javaCmd = Get-JavaCommand
-        $argFile = Join-Path (Get-Location) "build\dev-args.txt"
-        if (-not (Test-Path $argFile)) {
-            & .\gradlew.bat classes --quiet --console=plain
-        }
-        & $javaCmd "@$argFile"
     }
     "watch" {
         Write-Host "[ComeFort Dev] Continuous Watch Mode (auto-recompile on Ctrl+S)..." -ForegroundColor Green

@@ -12,11 +12,17 @@ import com.techsenger.jeditermfx.core.emulator.ColorPaletteImpl;
 import com.techsenger.jeditermfx.core.util.TermSize;
 import com.techsenger.jeditermfx.ui.JediTermFxWidget;
 import com.techsenger.jeditermfx.ui.settings.DefaultSettingsProvider;
+import com.techsenger.jeditermfx.core.model.TerminalSelection;
+import com.techsenger.jeditermfx.ui.TerminalActionPresentation;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.util.Callback;
@@ -168,6 +174,18 @@ public class TerminalPanel {
         public int getBufferMaxLinesCount() {
             return 5000;
         }
+
+        @Override
+        public TerminalActionPresentation getCopyActionPresentation() {
+            return new TerminalActionPresentation("Copy",
+                    new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        }
+
+        @Override
+        public TerminalActionPresentation getPasteActionPresentation() {
+            return new TerminalActionPresentation("Paste",
+                    new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        }
     }
 
     /**
@@ -256,7 +274,31 @@ public class TerminalPanel {
         // Embed terminal pane into VBox
         Pane terminalPane = terminalWidget.getPane();
         terminalPane.setStyle("-fx-background-color: #121317;");
+        if (terminalWidget.getTerminalPanel() != null && terminalWidget.getTerminalPanel().getPane() != null) {
+            terminalWidget.getTerminalPanel().getPane().setStyle("-fx-background-color: #121317;");
+        }
         VBox.setVgrow(terminalPane, Priority.ALWAYS);
+
+        // Standard Windows Terminal / PowerShell keyboard handling:
+        // - Ctrl+C when no text selected: sends \u0003 (SIGINT / interrupt) to cancel command or clear prompt
+        // - Ctrl+C when text is selected: copies selection to clipboard
+        // - Ctrl+V: pastes clipboard content into shell
+        terminalPane.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.isControlDown() && !event.isAltDown() && !event.isMetaDown()) {
+                if (event.getCode() == KeyCode.C && !event.isShiftDown()) {
+                    String selectedText = terminalWidget.getTerminalPanel().selectedTextProperty().get();
+                    if (selectedText != null && !selectedText.isEmpty()) {
+                        terminalWidget.getTerminalPanel().handleCopy(false, false);
+                    } else {
+                        sendInput("\u0003");
+                    }
+                    event.consume();
+                } else if (event.getCode() == KeyCode.V && !event.isShiftDown()) {
+                    terminalWidget.getTerminalPanel().handlePaste();
+                    event.consume();
+                }
+            }
+        });
 
         rootNode.getChildren().addAll(header, terminalPane);
 
@@ -361,7 +403,7 @@ public class TerminalPanel {
         // Close button (Ctrl+` or Ctrl+T)
         Button closeBtn = new Button("✕");
         closeBtn.getStyleClass().add("terminal-btn-close");
-        closeBtn.setTooltip(new Tooltip("Hide Terminal (Ctrl+`)"));
+        closeBtn.setTooltip(new Tooltip("Hide Bottom Panel (Ctrl+J / Ctrl+`)"));
         closeBtn.setOnAction(e -> {
             if (onCloseRequest != null) {
                 onCloseRequest.run();
@@ -420,6 +462,11 @@ public class TerminalPanel {
         env.put("COMEFORT_TERMINAL", "1");
         env.put("TERM", "xterm-256color");
         env.put("COLORTERM", "truecolor");
+        env.put("PYTHONIOENCODING", "utf-8");
+        env.put("JAVA_TOOL_OPTIONS", "-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8");
+        env.put("LANG", "en_US.UTF-8");
+        env.put("LC_ALL", "en_US.UTF-8");
+        env.put("WT_SESSION", UUID.randomUUID().toString());
 
         try {
             String[] cmdArray = shellProfile.launchArgs().toArray(new String[0]);
@@ -428,7 +475,10 @@ public class TerminalPanel {
                     .setEnvironment(env)
                     .setDirectory(workDir.getAbsolutePath())
                     .setInitialColumns(100)
-                    .setInitialRows(28);
+                    .setInitialRows(28)
+                    .setConsole(false)
+                    .setUseWinConPty(true)
+                    .setWindowsAnsiColorEnabled(true);
 
             ptyProcess = pb.start();
             ttyConnector = new PtyTtyConnector(ptyProcess);
@@ -556,16 +606,25 @@ public class TerminalPanel {
     }
 
     private synchronized void destroyProcessOnly() {
-        if (terminalWidget != null && terminalWidget.isSessionRunning()) {
-            terminalWidget.stop();
+        if (ttyConnector != null) {
+            try {
+                ttyConnector.close();
+            } catch (Exception ignored) {
+            }
+            ttyConnector = null;
         }
         if (ptyProcess != null) {
-            ptyProcess.destroyForcibly();
+            try {
+                ptyProcess.destroyForcibly();
+            } catch (Exception ignored) {
+            }
             ptyProcess = null;
         }
-        if (ttyConnector != null) {
-            ttyConnector.close();
-            ttyConnector = null;
+        if (terminalWidget != null && terminalWidget.isSessionRunning()) {
+            try {
+                terminalWidget.stop();
+            } catch (Exception ignored) {
+            }
         }
     }
 

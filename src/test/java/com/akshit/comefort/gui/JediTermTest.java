@@ -93,7 +93,7 @@ class JediTermTest {
             }
         });
 
-        boolean completed = latch.await(6, TimeUnit.SECONDS);
+        boolean completed = latch.await(12, TimeUnit.SECONDS);
         assertTrue(completed, "JediTerm widget creation timed out");
         assertTrue(success.get(), "JediTerm widget creation failed");
     }

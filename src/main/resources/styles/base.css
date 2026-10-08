@@ -31,10 +31,47 @@
     -fx-padding: 12 0 12 0;
 }
 
+.sidebar .brand-header {
+    -fx-padding: 14 16 20 20;
+    -fx-alignment: center-left;
+}
+
 .sidebar .brand {
     -fx-font-size: 18px;
     -fx-font-weight: bold;
-    -fx-padding: 16 20 24 20;
+    -fx-padding: 0;
+}
+
+.sidebar-toggle-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 13px;
+    -fx-padding: 2 6 2 6;
+    -fx-cursor: hand;
+    -fx-background-radius: 4;
+}
+
+.sidebar-toggle-btn:hover {
+    -fx-background-color: #2b3044;
+    -fx-text-fill: #ffffff;
+}
+
+.sidebar-expand-btn {
+    -fx-background-color: #1e202c;
+    -fx-text-fill: #8b949e;
+    -fx-border-color: #30364d;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-font-size: 13px;
+    -fx-padding: 4 8 4 8;
+    -fx-cursor: hand;
+    -fx-opacity: 0.85;
+}
+
+.sidebar-expand-btn:hover {
+    -fx-background-color: #2b3044;
+    -fx-text-fill: #ffffff;
+    -fx-opacity: 1.0;
 }
 
 .sidebar .nav-item {
